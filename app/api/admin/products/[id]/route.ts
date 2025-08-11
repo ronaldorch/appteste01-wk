@@ -3,72 +3,50 @@ import { query } from "@/lib/database"
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const body = await request.json()
-    const { stock_grams, price_per_gram, active, reason } = body
-    const productId = params.id
+    const { id } = params
+    const { stock_grams, price_per_gram, active, reason } = await request.json()
 
-    // Buscar estoque atual
-    const currentProduct = await query("SELECT stock_grams FROM products WHERE id = $1", [productId])
-
+    // Get current product data
+    const currentProduct = await query("SELECT * FROM products WHERE id = $1", [id])
     if (currentProduct.rows.length === 0) {
-      return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 })
+      return NextResponse.json({ success: false, error: "Produto não encontrado" }, { status: 404 })
     }
 
-    const previousStock = currentProduct.rows[0].stock_grams
+    const oldStock = Number.parseFloat(currentProduct.rows[0].stock_grams)
+    const newStock = Number.parseFloat(stock_grams)
 
-    // Atualizar produto
+    // Update product
     const result = await query(
       `
       UPDATE products 
-      SET stock_grams = $1, price_per_gram = $2, active = $3, updated_at = CURRENT_TIMESTAMP
+      SET stock_grams = $1, price_per_gram = $2, is_active = $3, updated_at = NOW()
       WHERE id = $4
       RETURNING *
     `,
-      [stock_grams, price_per_gram, active, productId],
+      [newStock, price_per_gram, active, id],
     )
 
-    // Registrar no histórico se o estoque mudou
-    if (stock_grams !== previousStock) {
+    // Log stock change if different
+    if (oldStock !== newStock) {
       await query(
         `
-        INSERT INTO stock_history (
-          product_id, change_type, quantity_grams, 
-          previous_stock, new_stock, reason
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO stock_history (product_id, change_type, quantity_change, previous_stock, new_stock, reason)
+        VALUES ($1, $2, $3, $4, $5, $6)
       `,
         [
-          productId,
-          stock_grams > previousStock ? "add" : "remove",
-          Math.abs(stock_grams - previousStock),
-          previousStock,
-          stock_grams,
+          id,
+          newStock > oldStock ? "add" : "remove",
+          Math.abs(newStock - oldStock),
+          oldStock,
+          newStock,
           reason || "Manual update via admin panel",
         ],
       )
     }
 
-    return NextResponse.json({
-      success: true,
-      product: result.rows[0],
-    })
+    return NextResponse.json({ success: true, product: result.rows[0] })
   } catch (error) {
     console.error("Error updating product:", error)
-    return NextResponse.json({ success: false, error: "Failed to update product" }, { status: 500 })
-  }
-}
-
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const productId = params.id
-
-    await query("DELETE FROM products WHERE id = $1", [productId])
-
-    return NextResponse.json({
-      success: true,
-      message: "Product deleted successfully",
-    })
-  } catch (error) {
-    console.error("Error deleting product:", error)
-    return NextResponse.json({ success: false, error: "Failed to delete product" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Erro ao atualizar produto" }, { status: 500 })
   }
 }

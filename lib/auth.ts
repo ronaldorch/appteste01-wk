@@ -6,6 +6,7 @@ export interface User {
   id: number
   name: string
   email: string
+  role?: string
   created_at: string
 }
 
@@ -16,41 +17,41 @@ export interface AuthResult {
 
 export async function createUser(name: string, email: string, password: string): Promise<User | null> {
   try {
-    console.log("Creating user:", { name, email })
+    console.log("🔐 Creating user:", { name, email })
     const hashedPassword = await bcrypt.hash(password, 12)
 
     const result = await query(
-      "INSERT INTO users (name, email, password, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, name, email, created_at",
-      [name, email, hashedPassword],
+      "INSERT INTO users (name, email, password, role, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id, name, email, role, created_at",
+      [name, email, hashedPassword, "user"],
     )
 
-    console.log("User created successfully:", result.rows[0])
+    console.log("✅ User created successfully:", result.rows[0])
     return result.rows[0]
   } catch (error) {
-    console.error("Error creating user:", error)
+    console.error("❌ Error creating user:", error)
     return null
   }
 }
 
 export async function findUserByEmail(email: string): Promise<User | null> {
   try {
-    console.log("Finding user by email:", email)
-    const result = await query("SELECT id, name, email, created_at FROM users WHERE email = $1", [email])
-    console.log("User found:", result.rows[0] || "No user found")
+    console.log("🔍 Finding user by email:", email)
+    const result = await query("SELECT id, name, email, role, created_at FROM users WHERE email = $1", [email])
+    console.log("👤 User found:", result.rows[0] || "No user found")
     return result.rows[0] || null
   } catch (error) {
-    console.error("Error finding user:", error)
+    console.error("❌ Error finding user:", error)
     return null
   }
 }
 
 export async function authenticateUser(email: string, password: string): Promise<AuthResult | null> {
   try {
-    console.log("Authenticating user:", email)
-    const result = await query("SELECT id, name, email, password FROM users WHERE email = $1", [email])
+    console.log("🔐 Authenticating user:", email)
+    const result = await query("SELECT id, name, email, password, role FROM users WHERE email = $1", [email])
 
     if (result.rows.length === 0) {
-      console.log("User not found")
+      console.log("❌ User not found")
       return null
     }
 
@@ -58,7 +59,7 @@ export async function authenticateUser(email: string, password: string): Promise
     const isValidPassword = await bcrypt.compare(password, user.password)
 
     if (!isValidPassword) {
-      console.log("Invalid password")
+      console.log("❌ Invalid password")
       return null
     }
 
@@ -66,18 +67,19 @@ export async function authenticateUser(email: string, password: string): Promise
       expiresIn: "7d",
     })
 
-    console.log("User authenticated successfully")
+    console.log("✅ User authenticated successfully")
     return {
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
         created_at: user.created_at,
       },
       token,
     }
   } catch (error) {
-    console.error("Error authenticating user:", error)
+    console.error("❌ Error authenticating user:", error)
     return null
   }
 }
