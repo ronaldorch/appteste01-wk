@@ -20,6 +20,7 @@ export async function createUser(name: string, email: string, password: string):
     console.log("🔐 Creating user:", { name, email })
     const hashedPassword = await bcrypt.hash(password, 12)
 
+    // Use the correct column name (password, not password_hash)
     const result = await query(
       "INSERT INTO users (name, email, password, role, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id, name, email, role, created_at",
       [name, email, hashedPassword, "user"],
@@ -48,7 +49,9 @@ export async function findUserByEmail(email: string): Promise<User | null> {
 export async function authenticateUser(email: string, password: string): Promise<AuthResult | null> {
   try {
     console.log("🔐 Authenticating user:", email)
-    const result = await query("SELECT id, name, email, password, role FROM users WHERE email = $1", [email])
+    const result = await query("SELECT id, name, email, password, role, created_at FROM users WHERE email = $1", [
+      email,
+    ])
 
     if (result.rows.length === 0) {
       console.log("❌ User not found")

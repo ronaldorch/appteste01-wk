@@ -1,52 +1,49 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/database"
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params
-    const { stock_grams, price_per_gram, active, reason } = await request.json()
+    console.log("🔍 Fetching product:", id)
 
-    // Get current product data
-    const currentProduct = await query("SELECT * FROM products WHERE id = $1", [id])
-    if (currentProduct.rows.length === 0) {
-      return NextResponse.json({ success: false, error: "Produto não encontrado" }, { status: 404 })
-    }
-
-    const oldStock = Number.parseFloat(currentProduct.rows[0].stock_grams)
-    const newStock = Number.parseFloat(stock_grams)
-
-    // Update product
     const result = await query(
-      `
-      UPDATE products 
-      SET stock_grams = $1, price_per_gram = $2, is_active = $3, updated_at = NOW()
-      WHERE id = $4
-      RETURNING *
-    `,
-      [newStock, price_per_gram, active, id],
+      `SELECT 
+        p.*, 
+        gt.name as template_name, gt.type as template_type, gt.category as template_category,
+        gt.effects, gt.flavors, gt.medical_uses
+      FROM products p
+      LEFT JOIN genetic_templates gt ON p.template_id = gt.id
+      WHERE p.id = $1`,
+      [id],
     )
 
-    // Log stock change if different
-    if (oldStock !== newStock) {
-      await query(
-        `
-        INSERT INTO stock_history (product_id, change_type, quantity_change, previous_stock, new_stock, reason)
-        VALUES ($1, $2, $3, $4, $5, $6)
-      `,
-        [
-          id,
-          newStock > oldStock ? "add" : "remove",
-          Math.abs(newStock - oldStock),
-          oldStock,
-          newStock,
-          reason || "Manual update via admin panel",
-        ],
-      )
+    if (result.rows.length === 0) {
+      return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 })
     }
 
-    return NextResponse.json({ success: true, product: result.rows[0] })
+    console.log("✅ Product found:", result.rows[0].name)
+    return NextResponse.json(result.rows[0])
   } catch (error) {
-    console.error("Error updating product:", error)
-    return NextResponse.json({ success: false, error: "Erro ao atualizar produto" }, { status: 500 })
+    console.error("❌ Error fetching product:", error)
+    return NextResponse.json({ error: "Erro ao buscar produto" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const { id } = params
+    console.log("🗑️ Deleting product:", id)
+
+    const result = await query("DELETE FROM products WHERE id = $1 RETURNING id", [id])
+
+    if (result.rows.length === 0) {
+      return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 })
+    }
+
+    console.log("✅ Product deleted:", id)
+    return NextResponse.json({ message: "Produto deletado com sucesso" })
+  } catch (error) {
+    console.error("❌ Error deleting product:", error)
+    return NextResponse.json({ error: "Erro ao deletar produto" }, { status: 500 })
   }
 }

@@ -1,15 +1,15 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, Package, Leaf } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Plus, Edit, Trash2, Save, X, Leaf, Beaker, Package } from "lucide-react"
 
 interface GeneticTemplate {
   id: number
@@ -18,142 +18,325 @@ interface GeneticTemplate {
   category: string
   thc_percentage: number
   cbd_percentage: number
-  description: string
   effects: string[]
   flavors: string[]
   medical_uses: string[]
-  growing_difficulty: string
-  flowering_time: string
-  yield_info: string
-  genetics: string
-  breeder: string
-  image_url: string
+  description: string
   is_active: boolean
-  product_count: number
-  total_stock: number
   created_at: string
+  updated_at: string
 }
 
-export default function TemplatesPage() {
+interface Product {
+  id: number
+  template_id: number
+  name: string
+  slug: string
+  description: string
+  price: number
+  stock_grams: number
+  extraction_type: string
+  is_active: boolean
+  template_name: string
+  template_type: string
+  template_category: string
+  created_at: string
+  updated_at: string
+}
+
+const EXTRACTION_TYPES = [
+  { value: "flower", label: "Flower (Flor)" },
+  { value: "ice", label: "Ice Hash" },
+  { value: "pac", label: "PAC (Pressed)" },
+  { value: "dry", label: "Dry Sift" },
+  { value: "rosin", label: "Rosin" },
+  { value: "live_resin", label: "Live Resin" },
+  { value: "shatter", label: "Shatter" },
+  { value: "wax", label: "Wax" },
+]
+
+const CANNABIS_TYPES = [
+  { value: "indica", label: "Indica" },
+  { value: "sativa", label: "Sativa" },
+  { value: "hybrid", label: "Híbrida" },
+  { value: "ruderalis", label: "Ruderalis" },
+]
+
+const CATEGORIES = [
+  { value: "premium", label: "Premium" },
+  { value: "standard", label: "Standard" },
+  { value: "budget", label: "Budget" },
+  { value: "exotic", label: "Exotic" },
+  { value: "medical", label: "Medical" },
+]
+
+const COMMON_EFFECTS = [
+  "Relaxante",
+  "Eufórico",
+  "Criativo",
+  "Energético",
+  "Sonolento",
+  "Focado",
+  "Feliz",
+  "Calmante",
+  "Estimulante",
+  "Analgésico",
+]
+
+const COMMON_FLAVORS = [
+  "Citrus",
+  "Doce",
+  "Terroso",
+  "Pinheiro",
+  "Frutal",
+  "Floral",
+  "Picante",
+  "Diesel",
+  "Mentolado",
+  "Tropical",
+]
+
+const MEDICAL_USES = [
+  "Ansiedade",
+  "Depressão",
+  "Dor Crônica",
+  "Insônia",
+  "Estresse",
+  "Inflamação",
+  "Náusea",
+  "Perda de Apetite",
+  "Epilepsia",
+  "PTSD",
+]
+
+export default function AdminTemplatesPage() {
   const [templates, setTemplates] = useState<GeneticTemplate[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [formData, setFormData] = useState({
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+  const [editingTemplate, setEditingTemplate] = useState<GeneticTemplate | null>(null)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [showNewTemplate, setShowNewTemplate] = useState(false)
+  const [showNewProduct, setShowNewProduct] = useState(false)
+
+  const [newTemplate, setNewTemplate] = useState({
     name: "",
-    type: "flower",
-    category: "hybrid",
-    thc_percentage: "",
-    cbd_percentage: "",
+    type: "hybrid",
+    category: "standard",
+    thc_percentage: 0,
+    cbd_percentage: 0,
+    effects: [] as string[],
+    flavors: [] as string[],
+    medical_uses: [] as string[],
     description: "",
-    effects: "",
-    flavors: "",
-    medical_uses: "",
-    growing_difficulty: "medium",
-    flowering_time: "",
-    yield_info: "",
-    genetics: "",
-    breeder: "",
-    image_url: "",
+  })
+
+  const [newProduct, setNewProduct] = useState({
+    template_id: 0,
+    name: "",
+    description: "",
+    price: 0,
+    stock_grams: 0,
+    extraction_type: "flower",
   })
 
   useEffect(() => {
-    fetchTemplates()
+    fetchData()
   }, [])
 
-  const fetchTemplates = async () => {
+  const fetchData = async () => {
     try {
-      const response = await fetch("/api/admin/templates")
-      const data = await response.json()
-      setTemplates(data)
+      setLoading(true)
+      const [templatesRes, productsRes] = await Promise.all([
+        fetch("/api/admin/templates"),
+        fetch("/api/admin/products"),
+      ])
+
+      if (templatesRes.ok) {
+        const templatesData = await templatesRes.json()
+        setTemplates(templatesData)
+      }
+
+      if (productsRes.ok) {
+        const productsData = await productsRes.json()
+        setProducts(productsData)
+      }
     } catch (error) {
-      console.error("Erro ao buscar templates:", error)
+      setError("Erro ao carregar dados")
+      console.error("Error fetching data:", error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreateTemplate = async () => {
     try {
-      const payload = {
-        ...formData,
-        thc_percentage: Number.parseFloat(formData.thc_percentage) || 0,
-        cbd_percentage: Number.parseFloat(formData.cbd_percentage) || 0,
-        effects: formData.effects
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        flavors: formData.flavors
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        medical_uses: formData.medical_uses
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-      }
-
       const response = await fetch("/api/admin/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(newTemplate),
       })
 
       if (response.ok) {
-        setShowForm(false)
-        setFormData({
+        setSuccess("Template criado com sucesso!")
+        setShowNewTemplate(false)
+        setNewTemplate({
           name: "",
-          type: "flower",
-          category: "hybrid",
-          thc_percentage: "",
-          cbd_percentage: "",
+          type: "hybrid",
+          category: "standard",
+          thc_percentage: 0,
+          cbd_percentage: 0,
+          effects: [],
+          flavors: [],
+          medical_uses: [],
           description: "",
-          effects: "",
-          flavors: "",
-          medical_uses: "",
-          growing_difficulty: "medium",
-          flowering_time: "",
-          yield_info: "",
-          genetics: "",
-          breeder: "",
-          image_url: "",
         })
-        fetchTemplates()
+        fetchData()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || "Erro ao criar template")
       }
     } catch (error) {
-      console.error("Erro ao criar template:", error)
+      setError("Erro ao criar template")
+      console.error("Error creating template:", error)
     }
   }
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "sativa":
-        return "bg-green-100 text-green-800"
-      case "indica":
-        return "bg-purple-100 text-purple-800"
-      case "hybrid":
-        return "bg-blue-100 text-blue-800"
-      default:
-        return "bg-gray-100 text-gray-800"
+  const handleCreateProduct = async () => {
+    try {
+      const response = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newProduct),
+      })
+
+      if (response.ok) {
+        setSuccess("Produto criado com sucesso!")
+        setShowNewProduct(false)
+        setNewProduct({
+          template_id: 0,
+          name: "",
+          description: "",
+          price: 0,
+          stock_grams: 0,
+          extraction_type: "flower",
+        })
+        fetchData()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || "Erro ao criar produto")
+      }
+    } catch (error) {
+      setError("Erro ao criar produto")
+      console.error("Error creating product:", error)
     }
   }
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "flower":
-        return <Leaf className="w-4 h-4" />
-      case "extract":
-        return <Package className="w-4 h-4" />
-      default:
-        return <Leaf className="w-4 h-4" />
+  const handleUpdateTemplate = async (template: GeneticTemplate) => {
+    try {
+      const response = await fetch("/api/admin/templates", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(template),
+      })
+
+      if (response.ok) {
+        setSuccess("Template atualizado com sucesso!")
+        setEditingTemplate(null)
+        fetchData()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || "Erro ao atualizar template")
+      }
+    } catch (error) {
+      setError("Erro ao atualizar template")
+      console.error("Error updating template:", error)
     }
+  }
+
+  const handleUpdateProduct = async (product: Product) => {
+    try {
+      const response = await fetch("/api/admin/products", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(product),
+      })
+
+      if (response.ok) {
+        setSuccess("Produto atualizado com sucesso!")
+        setEditingProduct(null)
+        fetchData()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || "Erro ao atualizar produto")
+      }
+    } catch (error) {
+      setError("Erro ao atualizar produto")
+      console.error("Error updating product:", error)
+    }
+  }
+
+  const handleDeleteTemplate = async (id: number) => {
+    if (!confirm("Tem certeza que deseja deletar este template?")) return
+
+    try {
+      const response = await fetch(`/api/admin/templates?id=${id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setSuccess("Template deletado com sucesso!")
+        fetchData()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || "Erro ao deletar template")
+      }
+    } catch (error) {
+      setError("Erro ao deletar template")
+      console.error("Error deleting template:", error)
+    }
+  }
+
+  const handleDeleteProduct = async (id: number) => {
+    if (!confirm("Tem certeza que deseja deletar este produto?")) return
+
+    try {
+      const response = await fetch(`/api/admin/products/${id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setSuccess("Produto deletado com sucesso!")
+        fetchData()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || "Erro ao deletar produto")
+      }
+    } catch (error) {
+      setError("Erro ao deletar produto")
+      console.error("Error deleting product:", error)
+    }
+  }
+
+  const addArrayItem = (array: string[], item: string, setter: (value: string[]) => void, maxItems = 10) => {
+    if (item && !array.includes(item) && array.length < maxItems) {
+      setter([...array, item])
+    }
+  }
+
+  const removeArrayItem = (array: string[], item: string, setter: (value: string[]) => void) => {
+    setter(array.filter((i) => i !== item))
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center text-white">Carregando templates...</div>
+          <div className="text-center text-white">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto"></div>
+            <p className="mt-4">Carregando...</p>
+          </div>
         </div>
       </div>
     )
@@ -162,252 +345,494 @@ export default function TemplatesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-white mb-2">Templates de Genéticas</h1>
-            <p className="text-green-200">Gerencie os templates base para criar produtos</p>
-          </div>
-          <Button onClick={() => setShowForm(!showForm)} className="bg-green-600 hover:bg-green-700 text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Template
-          </Button>
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
+            <Leaf className="h-10 w-10" />
+            Painel Admin - Cannabis Marketplace
+          </h1>
+          <p className="text-green-100">Gerencie templates de genéticas e produtos</p>
         </div>
 
-        {showForm && (
-          <Card className="mb-8 bg-white/10 backdrop-blur-sm border-green-500/20">
-            <CardHeader>
-              <CardTitle className="text-white">Criar Novo Template</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name" className="text-white">
-                    Nome da Genética
-                  </Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="bg-white/20 border-green-500/30 text-white placeholder-green-200"
-                    placeholder="Ex: OG Kush"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="type" className="text-white">
-                    Tipo
-                  </Label>
-                  <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-                    <SelectTrigger className="bg-white/20 border-green-500/30 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="flower">Flower</SelectItem>
-                      <SelectItem value="extract">Extrato</SelectItem>
-                      <SelectItem value="edible">Comestível</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="category" className="text-white">
-                    Categoria
-                  </Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => setFormData({ ...formData, category: value })}
-                  >
-                    <SelectTrigger className="bg-white/20 border-green-500/30 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sativa">Sativa</SelectItem>
-                      <SelectItem value="indica">Indica</SelectItem>
-                      <SelectItem value="hybrid">Híbrida</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="thc" className="text-white">
-                    THC %
-                  </Label>
-                  <Input
-                    id="thc"
-                    type="number"
-                    step="0.1"
-                    value={formData.thc_percentage}
-                    onChange={(e) => setFormData({ ...formData, thc_percentage: e.target.value })}
-                    className="bg-white/20 border-green-500/30 text-white placeholder-green-200"
-                    placeholder="Ex: 24.5"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="cbd" className="text-white">
-                    CBD %
-                  </Label>
-                  <Input
-                    id="cbd"
-                    type="number"
-                    step="0.1"
-                    value={formData.cbd_percentage}
-                    onChange={(e) => setFormData({ ...formData, cbd_percentage: e.target.value })}
-                    className="bg-white/20 border-green-500/30 text-white placeholder-green-200"
-                    placeholder="Ex: 0.3"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="breeder" className="text-white">
-                    Breeder
-                  </Label>
-                  <Input
-                    id="breeder"
-                    value={formData.breeder}
-                    onChange={(e) => setFormData({ ...formData, breeder: e.target.value })}
-                    className="bg-white/20 border-green-500/30 text-white placeholder-green-200"
-                    placeholder="Ex: DNA Genetics"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <Label htmlFor="description" className="text-white">
-                    Descrição
-                  </Label>
-                  <Input
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="bg-white/20 border-green-500/30 text-white placeholder-green-200"
-                    placeholder="Descrição da genética..."
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="effects" className="text-white">
-                    Efeitos (separados por vírgula)
-                  </Label>
-                  <Input
-                    id="effects"
-                    value={formData.effects}
-                    onChange={(e) => setFormData({ ...formData, effects: e.target.value })}
-                    className="bg-white/20 border-green-500/30 text-white placeholder-green-200"
-                    placeholder="relaxante, eufórico, criativo"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="flavors" className="text-white">
-                    Sabores (separados por vírgula)
-                  </Label>
-                  <Input
-                    id="flavors"
-                    value={formData.flavors}
-                    onChange={(e) => setFormData({ ...formData, flavors: e.target.value })}
-                    className="bg-white/20 border-green-500/30 text-white placeholder-green-200"
-                    placeholder="terroso, pinho, limão"
-                  />
-                </div>
-
-                <div className="md:col-span-2 flex gap-4">
-                  <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                    Criar Template
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowForm(false)}
-                    className="border-green-500/30 text-white hover:bg-green-500/20"
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+        {error && (
+          <Alert className="mb-6 border-red-500 bg-red-50">
+            <AlertDescription className="text-red-700">{error}</AlertDescription>
+          </Alert>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {templates.map((template) => (
-            <Card
-              key={template.id}
-              className="bg-white/10 backdrop-blur-sm border-green-500/20 hover:bg-white/15 transition-all"
-            >
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {getTypeIcon(template.type)}
-                    <CardTitle className="text-white text-lg">{template.name}</CardTitle>
-                  </div>
-                  <Badge className={getCategoryColor(template.category)}>{template.category}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-green-200">THC: {template.thc_percentage}%</span>
-                  <span className="text-green-200">CBD: {template.cbd_percentage}%</span>
-                </div>
+        {success && (
+          <Alert className="mb-6 border-green-500 bg-green-50">
+            <AlertDescription className="text-green-700">{success}</AlertDescription>
+          </Alert>
+        )}
 
-                <p className="text-green-100 text-sm line-clamp-2">{template.description}</p>
+        <Tabs defaultValue="templates" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 bg-green-800">
+            <TabsTrigger value="templates" className="flex items-center gap-2">
+              <Beaker className="h-4 w-4" />
+              Templates de Genéticas
+            </TabsTrigger>
+            <TabsTrigger value="products" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Produtos
+            </TabsTrigger>
+          </TabsList>
 
-                {template.effects && template.effects.length > 0 && (
-                  <div>
-                    <p className="text-green-200 text-xs mb-1">Efeitos:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {template.effects.slice(0, 3).map((effect, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs bg-green-600/20 text-green-200">
-                          {effect}
-                        </Badge>
-                      ))}
-                      {template.effects.length > 3 && (
-                        <Badge variant="secondary" className="text-xs bg-green-600/20 text-green-200">
-                          +{template.effects.length - 3}
-                        </Badge>
-                      )}
+          <TabsContent value="templates" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-white">Templates de Genéticas ({templates.length})</h2>
+              <Button onClick={() => setShowNewTemplate(true)} className="bg-green-600 hover:bg-green-700 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Template
+              </Button>
+            </div>
+
+            {showNewTemplate && (
+              <Card className="border-green-500 bg-white/95 backdrop-blur">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Criar Novo Template</span>
+                    <Button variant="ghost" size="sm" onClick={() => setShowNewTemplate(false)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Nome da Genética</Label>
+                      <Input
+                        id="name"
+                        value={newTemplate.name}
+                        onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
+                        placeholder="Ex: OG Kush, White Widow..."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="type">Tipo</Label>
+                      <Select
+                        value={newTemplate.type}
+                        onValueChange={(value) => setNewTemplate({ ...newTemplate, type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CANNABIS_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="category">Categoria</Label>
+                      <Select
+                        value={newTemplate.category}
+                        onValueChange={(value) => setNewTemplate({ ...newTemplate, category: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CATEGORIES.map((cat) => (
+                            <SelectItem key={cat.value} value={cat.value}>
+                              {cat.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="thc">THC %</Label>
+                      <Input
+                        id="thc"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={newTemplate.thc_percentage}
+                        onChange={(e) =>
+                          setNewTemplate({ ...newTemplate, thc_percentage: Number.parseFloat(e.target.value) || 0 })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cbd">CBD %</Label>
+                      <Input
+                        id="cbd"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={newTemplate.cbd_percentage}
+                        onChange={(e) =>
+                          setNewTemplate({ ...newTemplate, cbd_percentage: Number.parseFloat(e.target.value) || 0 })
+                        }
+                      />
                     </div>
                   </div>
-                )}
 
-                <div className="flex justify-between items-center pt-4 border-t border-green-500/20">
-                  <div className="text-sm text-green-200">
-                    <div>{template.product_count} produtos</div>
-                    <div>{template.total_stock}g em estoque</div>
+                  <div>
+                    <Label>Efeitos</Label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {newTemplate.effects.map((effect) => (
+                        <Badge
+                          key={effect}
+                          variant="secondary"
+                          className="cursor-pointer"
+                          onClick={() =>
+                            removeArrayItem(newTemplate.effects, effect, (effects) =>
+                              setNewTemplate({ ...newTemplate, effects }),
+                            )
+                          }
+                        >
+                          {effect} ×
+                        </Badge>
+                      ))}
+                    </div>
+                    <Select
+                      onValueChange={(value) =>
+                        addArrayItem(newTemplate.effects, value, (effects) =>
+                          setNewTemplate({ ...newTemplate, effects }),
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Adicionar efeito" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COMMON_EFFECTS.filter((effect) => !newTemplate.effects.includes(effect)).map((effect) => (
+                          <SelectItem key={effect} value={effect}>
+                            {effect}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  <div>
+                    <Label>Sabores</Label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {newTemplate.flavors.map((flavor) => (
+                        <Badge
+                          key={flavor}
+                          variant="secondary"
+                          className="cursor-pointer"
+                          onClick={() =>
+                            removeArrayItem(newTemplate.flavors, flavor, (flavors) =>
+                              setNewTemplate({ ...newTemplate, flavors }),
+                            )
+                          }
+                        >
+                          {flavor} ×
+                        </Badge>
+                      ))}
+                    </div>
+                    <Select
+                      onValueChange={(value) =>
+                        addArrayItem(newTemplate.flavors, value, (flavors) =>
+                          setNewTemplate({ ...newTemplate, flavors }),
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Adicionar sabor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COMMON_FLAVORS.filter((flavor) => !newTemplate.flavors.includes(flavor)).map((flavor) => (
+                          <SelectItem key={flavor} value={flavor}>
+                            {flavor}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Usos Medicinais</Label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {newTemplate.medical_uses.map((use) => (
+                        <Badge
+                          key={use}
+                          variant="secondary"
+                          className="cursor-pointer"
+                          onClick={() =>
+                            removeArrayItem(newTemplate.medical_uses, use, (medical_uses) =>
+                              setNewTemplate({ ...newTemplate, medical_uses }),
+                            )
+                          }
+                        >
+                          {use} ×
+                        </Badge>
+                      ))}
+                    </div>
+                    <Select
+                      onValueChange={(value) =>
+                        addArrayItem(newTemplate.medical_uses, value, (medical_uses) =>
+                          setNewTemplate({ ...newTemplate, medical_uses }),
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Adicionar uso medicinal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MEDICAL_USES.filter((use) => !newTemplate.medical_uses.includes(use)).map((use) => (
+                          <SelectItem key={use} value={use}>
+                            {use}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="description">Descrição</Label>
+                    <textarea
+                      id="description"
+                      className="w-full p-2 border rounded-md"
+                      rows={3}
+                      value={newTemplate.description}
+                      onChange={(e) => setNewTemplate({ ...newTemplate, description: e.target.value })}
+                      placeholder="Descrição detalhada da genética..."
+                    />
+                  </div>
+
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-green-500/30 text-green-200 hover:bg-green-500/20 bg-transparent"
-                    >
-                      <Edit className="w-3 h-3" />
+                    <Button onClick={handleCreateTemplate} className="bg-green-600 hover:bg-green-700">
+                      <Save className="h-4 w-4 mr-2" />
+                      Criar Template
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-red-500/30 text-red-200 hover:bg-red-500/20 bg-transparent"
-                    >
-                      <Trash2 className="w-3 h-3" />
+                    <Button variant="outline" onClick={() => setShowNewTemplate(false)}>
+                      Cancelar
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            )}
 
-        {templates.length === 0 && (
-          <div className="text-center py-12">
-            <Leaf className="w-16 h-16 text-green-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">Nenhum template encontrado</h3>
-            <p className="text-green-200 mb-4">Crie seu primeiro template de genética para começar</p>
-            <Button onClick={() => setShowForm(true)} className="bg-green-600 hover:bg-green-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Criar Primeiro Template
-            </Button>
-          </div>
-        )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {templates.map((template) => (
+                <Card key={template.id} className="border-green-500 bg-white/95 backdrop-blur">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>{template.name}</span>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => setEditingTemplate(template)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteTemplate(template.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardTitle>
+                    <CardDescription>
+                      {template.type} • {template.category}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>THC: {template.thc_percentage}%</span>
+                        <span>CBD: {template.cbd_percentage}%</span>
+                      </div>
+                      {template.effects.length > 0 && (
+                        <div>
+                          <strong>Efeitos:</strong>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {template.effects.slice(0, 3).map((effect) => (
+                              <Badge key={effect} variant="outline" className="text-xs">
+                                {effect}
+                              </Badge>
+                            ))}
+                            {template.effects.length > 3 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{template.effects.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <Badge variant={template.is_active ? "default" : "secondary"}>
+                          {template.is_active ? "Ativo" : "Inativo"}
+                        </Badge>
+                        <span className="text-sm text-gray-500">
+                          {products.filter((p) => p.template_id === template.id).length} produtos
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="products" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-white">Produtos ({products.length})</h2>
+              <Button onClick={() => setShowNewProduct(true)} className="bg-green-600 hover:bg-green-700 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Produto
+              </Button>
+            </div>
+
+            {showNewProduct && (
+              <Card className="border-green-500 bg-white/95 backdrop-blur">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Criar Novo Produto</span>
+                    <Button variant="ghost" size="sm" onClick={() => setShowNewProduct(false)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="template">Template Base</Label>
+                      <Select
+                        value={newProduct.template_id.toString()}
+                        onValueChange={(value) => setNewProduct({ ...newProduct, template_id: Number.parseInt(value) })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um template" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {templates
+                            .filter((t) => t.is_active)
+                            .map((template) => (
+                              <SelectItem key={template.id} value={template.id.toString()}>
+                                {template.name} ({template.type})
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="extraction_type">Tipo de Extração</Label>
+                      <Select
+                        value={newProduct.extraction_type}
+                        onValueChange={(value) => setNewProduct({ ...newProduct, extraction_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EXTRACTION_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="product_name">Nome do Produto</Label>
+                      <Input
+                        id="product_name"
+                        value={newProduct.name}
+                        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                        placeholder="Ex: OG Kush Ice Hash Premium"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="price">Preço (R$ por grama)</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={newProduct.price}
+                        onChange={(e) =>
+                          setNewProduct({ ...newProduct, price: Number.parseFloat(e.target.value) || 0 })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="stock">Estoque (gramas)</Label>
+                      <Input
+                        id="stock"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={newProduct.stock_grams}
+                        onChange={(e) =>
+                          setNewProduct({ ...newProduct, stock_grams: Number.parseFloat(e.target.value) || 0 })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="product_description">Descrição do Produto</Label>
+                    <textarea
+                      id="product_description"
+                      className="w-full p-2 border rounded-md"
+                      rows={3}
+                      value={newProduct.description}
+                      onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                      placeholder="Descrição específica do produto..."
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button onClick={handleCreateProduct} className="bg-green-600 hover:bg-green-700">
+                      <Save className="h-4 w-4 mr-2" />
+                      Criar Produto
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowNewProduct(false)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {products.map((product) => (
+                <Card key={product.id} className="border-green-500 bg-white/95 backdrop-blur">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="text-sm">{product.name}</span>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => setEditingProduct(product)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteProduct(product.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardTitle>
+                    <CardDescription>
+                      {product.template_name} • {product.extraction_type}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>Preço: R$ {product.price.toFixed(2)}/g</span>
+                        <span>Estoque: {product.stock_grams}g</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Badge variant={product.is_active ? "default" : "secondary"}>
+                          {product.is_active ? "Ativo" : "Inativo"}
+                        </Badge>
+                        <Badge variant="outline">
+                          {EXTRACTION_TYPES.find((t) => t.value === product.extraction_type)?.label}
+                        </Badge>
+                      </div>
+                      {product.description && (
+                        <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )
