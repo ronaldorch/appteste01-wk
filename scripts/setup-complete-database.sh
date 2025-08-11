@@ -2,49 +2,69 @@
 
 echo "🗄️ Configurando banco de dados completo..."
 
-# Verificar se PostgreSQL está instalado
-if ! command -v psql &> /dev/null; then
-    echo "📦 Instalando PostgreSQL..."
-    sudo apt update
-    sudo apt install -y postgresql postgresql-contrib
-    sudo systemctl start postgresql
-    sudo systemctl enable postgresql
-fi
+# Configurações do banco
+DB_HOST="10.0.2.4"
+DB_PORT="5432"
+DB_NAME="azure_site"
+DB_USER="app_user"
+DB_PASSWORD="sample123"
 
-# Configurar usuário e banco
-echo "👤 Configurando usuário e banco..."
-sudo -u postgres psql << EOF
--- Criar usuário se não existir
-DO \$\$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'postgres') THEN
-        CREATE USER postgres WITH PASSWORD 'Ronaldo123';
-    END IF;
-END
-\$\$;
-
--- Alterar senha do usuário
-ALTER USER postgres PASSWORD 'Ronaldo123';
-
--- Criar banco se não existir
-SELECT 'CREATE DATABASE azure_site' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'azure_site')\gexec
-
--- Dar privilégios
-GRANT ALL PRIVILEGES ON DATABASE azure_site TO postgres;
-EOF
-
-# Executar script de criação das tabelas
-echo "🏗️ Criando estrutura do banco..."
-sudo -u postgres psql -d azure_site -f /var/www/azure-site/scripts/cannabis-marketplace-complete.sql
+echo "📍 Conectando em: $DB_HOST:$DB_PORT"
+echo "📍 Banco: $DB_NAME"
+echo "📍 Usuário: $DB_USER"
 
 # Testar conexão
-echo "🔍 Testando conexão..."
-sudo -u postgres psql -d azure_site -c "SELECT 'Conexão OK!' as status, NOW() as timestamp;"
+echo "🔍 Testando conexão com o banco..."
+if PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT version();" > /dev/null 2>&1; then
+    echo "✅ Conexão com banco estabelecida!"
+else
+    echo "❌ Erro ao conectar com o banco!"
+    echo "Verifique se:"
+    echo "- A VM do banco está rodando"
+    echo "- As credenciais estão corretas"
+    echo "- O firewall permite conexões na porta 5432"
+    exit 1
+fi
 
-echo "✅ Banco de dados configurado com sucesso!"
-echo "📊 Estrutura criada:"
-echo "   - Usuários e autenticação"
-echo "   - Templates de genéticas"
-echo "   - Produtos com estoque"
-echo "   - Sistema de pedidos"
-echo "   - Triggers automáticos"
+# Executar script SQL
+echo "📊 Executando script de criação das tabelas..."
+if PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f scripts/cannabis-marketplace-complete.sql; then
+    echo "✅ Tabelas criadas com sucesso!"
+else
+    echo "❌ Erro ao executar script SQL!"
+    exit 1
+fi
+
+# Verificar tabelas criadas
+echo "🔍 Verificando tabelas criadas..."
+PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
+SELECT 
+    schemaname,
+    tablename,
+    tableowner
+FROM pg_tables 
+WHERE schemaname = 'public' 
+ORDER BY tablename;
+"
+
+echo "📊 Contando registros..."
+PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
+SELECT 
+    'genetic_templates' as tabela, COUNT(*) as registros FROM genetic_templates
+UNION ALL
+SELECT 
+    'extraction_types' as tabela, COUNT(*) as registros FROM extraction_types
+UNION ALL
+SELECT 
+    'categories' as tabela, COUNT(*) as registros FROM categories
+UNION ALL
+SELECT 
+    'products' as tabela, COUNT(*) as registros FROM products;
+"
+
+echo ""
+echo "✅ Configuração do banco concluída!"
+echo "🌐 Agora você pode acessar:"
+echo "   - Site: http://20.206.241.250"
+echo "   - Admin: http://20.206.241.250/admin/templates"
+echo ""

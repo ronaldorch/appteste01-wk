@@ -3,21 +3,48 @@ import { query } from "@/lib/database"
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = params
     const body = await request.json()
-    const { stock_quantity, price, status, extraction_type, batch_number } = body
+    const { stock_grams, price_per_gram, active, reason } = body
+    const productId = params.id
 
+    // Buscar estoque atual
+    const currentProduct = await query("SELECT stock_grams FROM products WHERE id = $1", [productId])
+
+    if (currentProduct.rows.length === 0) {
+      return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 })
+    }
+
+    const previousStock = currentProduct.rows[0].stock_grams
+
+    // Atualizar produto
     const result = await query(
-      `UPDATE products 
-       SET stock_quantity = $1, price = $2, status = $3, extraction_type = $4, 
-           batch_number = $5, updated_at = NOW()
-       WHERE id = $6 
-       RETURNING *`,
-      [stock_quantity, price, status, extraction_type, batch_number, id],
+      `
+      UPDATE products 
+      SET stock_grams = $1, price_per_gram = $2, active = $3, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
+      RETURNING *
+    `,
+      [stock_grams, price_per_gram, active, productId],
     )
 
-    if (result.rows.length === 0) {
-      return NextResponse.json({ success: false, error: "Produto não encontrado" }, { status: 404 })
+    // Registrar no histórico se o estoque mudou
+    if (stock_grams !== previousStock) {
+      await query(
+        `
+        INSERT INTO stock_history (
+          product_id, change_type, quantity_grams, 
+          previous_stock, new_stock, reason
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+      `,
+        [
+          productId,
+          stock_grams > previousStock ? "add" : "remove",
+          Math.abs(stock_grams - previousStock),
+          previousStock,
+          stock_grams,
+          reason || "Manual update via admin panel",
+        ],
+      )
     }
 
     return NextResponse.json({
@@ -25,27 +52,23 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       product: result.rows[0],
     })
   } catch (error) {
-    console.error("Erro ao atualizar produto:", error)
-    return NextResponse.json({ success: false, error: "Erro interno do servidor" }, { status: 500 })
+    console.error("Error updating product:", error)
+    return NextResponse.json({ success: false, error: "Failed to update product" }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = params
+    const productId = params.id
 
-    const result = await query("DELETE FROM products WHERE id = $1 RETURNING *", [id])
-
-    if (result.rows.length === 0) {
-      return NextResponse.json({ success: false, error: "Produto não encontrado" }, { status: 404 })
-    }
+    await query("DELETE FROM products WHERE id = $1", [productId])
 
     return NextResponse.json({
       success: true,
-      message: "Produto removido com sucesso",
+      message: "Product deleted successfully",
     })
   } catch (error) {
-    console.error("Erro ao remover produto:", error)
-    return NextResponse.json({ success: false, error: "Erro interno do servidor" }, { status: 500 })
+    console.error("Error deleting product:", error)
+    return NextResponse.json({ success: false, error: "Failed to delete product" }, { status: 500 })
   }
 }

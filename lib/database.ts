@@ -1,11 +1,11 @@
 import { Pool } from "pg"
 
 const pool = new Pool({
-  host: process.env.DB_HOST || "localhost",
+  host: process.env.DB_HOST || "10.0.2.4",
   port: Number.parseInt(process.env.DB_PORT || "5432"),
   database: process.env.DB_NAME || "azure_site",
-  user: process.env.DB_USER || "postgres",
-  password: process.env.DB_PASSWORD || "Ronaldo123",
+  user: process.env.DB_USER || "app_user",
+  password: process.env.DB_PASSWORD || "sample123",
   ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
@@ -27,7 +27,7 @@ export async function query(text: string, params?: any[]) {
 
 export async function testConnection() {
   try {
-    const result = await query("SELECT NOW() as current_time")
+    const result = await query("SELECT NOW() as current_time, version() as pg_version")
     console.log("✅ Database connected successfully:", result.rows[0])
     return true
   } catch (error) {

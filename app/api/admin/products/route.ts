@@ -1,59 +1,30 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/database"
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const template_id = searchParams.get("template_id")
-    const status = searchParams.get("status")
-
-    let queryText = `
+    const result = await query(`
       SELECT 
         p.*,
-        pt.name as template_name,
-        pt.genetics,
-        pt.strain_type,
-        c.name as category_name,
-        c.slug as category_slug
+        gt.name as template_name,
+        gt.strain_type,
+        et.name as extraction_type,
+        et.color_code,
+        c.name as category_name
       FROM products p
-      LEFT JOIN product_templates pt ON p.template_id = pt.id
+      LEFT JOIN genetic_templates gt ON p.template_id = gt.id
+      LEFT JOIN extraction_types et ON p.extraction_type_id = et.id
       LEFT JOIN categories c ON p.category_id = c.id
-      WHERE 1=1
-    `
-
-    const params: any[] = []
-    let paramCount = 0
-
-    if (template_id) {
-      paramCount++
-      queryText += ` AND p.template_id = $${paramCount}`
-      params.push(template_id)
-    }
-
-    if (status) {
-      paramCount++
-      queryText += ` AND p.status = $${paramCount}`
-      params.push(status)
-    }
-
-    queryText += ` ORDER BY p.created_at DESC`
-
-    const result = await query(queryText, params)
-
-    const products = result.rows.map((product) => ({
-      ...product,
-      price: Number.parseFloat(product.price) || 0,
-      stock_quantity: Number.parseInt(product.stock_quantity) || 0,
-    }))
+      ORDER BY p.created_at DESC
+    `)
 
     return NextResponse.json({
       success: true,
-      products,
-      total: products.length,
+      products: result.rows,
     })
   } catch (error) {
-    console.error("Erro ao buscar produtos:", error)
-    return NextResponse.json({ success: false, error: "Erro interno do servidor" }, { status: 500 })
+    console.error("Error fetching products:", error)
+    return NextResponse.json({ success: false, error: "Failed to fetch products" }, { status: 500 })
   }
 }
 
@@ -62,45 +33,48 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       template_id,
-      name,
-      description,
-      price,
-      stock_quantity,
-      unit,
-      extraction_type,
-      batch_number,
-      harvest_date,
-      test_results,
+      extraction_type_id,
       category_id,
-      user_id,
-      slug,
-      featured,
-      auto_deactivate,
+      name,
+      price_per_gram,
+      stock_grams,
+      thc_percentage,
+      cbd_percentage,
+      description,
+      min_order_grams,
+      max_order_grams,
     } = body
 
+    // Gerar slug único
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+
     const result = await query(
-      `INSERT INTO products (
-        template_id, name, description, price, stock_quantity, unit, extraction_type,
-        batch_number, harvest_date, test_results, category_id, user_id, slug,
-        featured, auto_deactivate
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-      RETURNING *`,
+      `
+      INSERT INTO products (
+        template_id, extraction_type_id, category_id,
+        name, slug, price_per_gram, stock_grams, 
+        thc_percentage, cbd_percentage, description,
+        min_order_grams, max_order_grams
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *
+    `,
       [
         template_id,
-        name,
-        description,
-        price,
-        stock_quantity,
-        unit,
-        extraction_type,
-        batch_number,
-        harvest_date,
-        test_results,
+        extraction_type_id,
         category_id,
-        user_id,
+        name,
         slug,
-        featured,
-        auto_deactivate,
+        price_per_gram,
+        stock_grams,
+        thc_percentage,
+        cbd_percentage,
+        description,
+        min_order_grams || 1.0,
+        max_order_grams || 100.0,
       ],
     )
 
@@ -109,7 +83,7 @@ export async function POST(request: NextRequest) {
       product: result.rows[0],
     })
   } catch (error) {
-    console.error("Erro ao criar produto:", error)
-    return NextResponse.json({ success: false, error: "Erro interno do servidor" }, { status: 500 })
+    console.error("Error creating product:", error)
+    return NextResponse.json({ success: false, error: "Failed to create product" }, { status: 500 })
   }
 }
