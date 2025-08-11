@@ -20,7 +20,6 @@ export async function createUser(name: string, email: string, password: string):
     console.log("🔐 Creating user:", { name, email })
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Use the correct column name (password, not password_hash)
     const result = await query(
       "INSERT INTO users (name, email, password, role, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id, name, email, role, created_at",
       [name, email, hashedPassword, "user"],
