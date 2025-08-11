@@ -2,56 +2,37 @@ import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { query } from "./database"
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production"
-
 export interface User {
   id: number
   name: string
   email: string
-  created_at: Date
-  updated_at: Date
+  created_at: string
 }
 
-// Hash da senha
-export async function hashPassword(password: string): Promise<string> {
-  const saltRounds = 12
-  return bcrypt.hash(password, saltRounds)
+export interface AuthResult {
+  user: User
+  token: string
 }
 
-// Verificar senha
-export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword)
-}
-
-// Gerar JWT token
-export function generateToken(user: User): string {
-  return jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-    },
-    JWT_SECRET,
-    { expiresIn: "7d" },
-  )
-}
-
-// Verificar JWT token
-export function verifyToken(token: string): any {
+export async function createUser(name: string, email: string, password: string): Promise<User | null> {
   try {
-    return jwt.verify(token, JWT_SECRET)
+    const hashedPassword = await bcrypt.hash(password, 12)
+
+    const result = await query(
+      "INSERT INTO users (name, email, password, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, name, email, created_at",
+      [name, email, hashedPassword],
+    )
+
+    return result.rows[0]
   } catch (error) {
+    console.error("Erro ao criar usuário:", error)
     return null
   }
 }
 
-// Buscar usuário por email
 export async function findUserByEmail(email: string): Promise<User | null> {
   try {
-    const result = await query(
-      "SELECT id, name, email, password_hash, created_at, updated_at FROM users WHERE email = $1",
-      [email],
-    )
+    const result = await query("SELECT id, name, email, created_at FROM users WHERE email = $1", [email])
     return result.rows[0] || null
   } catch (error) {
     console.error("Erro ao buscar usuário:", error)
@@ -59,41 +40,34 @@ export async function findUserByEmail(email: string): Promise<User | null> {
   }
 }
 
-// Criar novo usuário
-export async function createUser(name: string, email: string, password: string): Promise<User | null> {
+export async function authenticateUser(email: string, password: string): Promise<AuthResult | null> {
   try {
-    const hashedPassword = await hashPassword(password)
-    const result = await query(
-      `INSERT INTO users (name, email, password_hash, created_at, updated_at) 
-       VALUES ($1, $2, $3, NOW(), NOW()) 
-       RETURNING id, name, email, created_at, updated_at`,
-      [name, email, hashedPassword],
-    )
-    return result.rows[0] || null
-  } catch (error) {
-    console.error("Erro ao criar usuário:", error)
-    return null
-  }
-}
+    const result = await query("SELECT id, name, email, password FROM users WHERE email = $1", [email])
 
-// Autenticar usuário
-export async function authenticateUser(email: string, password: string): Promise<{ user: User; token: string } | null> {
-  try {
-    const result = await query(
-      "SELECT id, name, email, password_hash, created_at, updated_at FROM users WHERE email = $1",
-      [email],
-    )
+    if (result.rows.length === 0) {
+      return null
+    }
 
     const user = result.rows[0]
-    if (!user) return null
+    const isValidPassword = await bcrypt.compare(password, user.password)
 
-    const isValidPassword = await verifyPassword(password, user.password_hash)
-    if (!isValidPassword) return null
+    if (!isValidPassword) {
+      return null
+    }
 
-    const { password_hash, ...userWithoutPassword } = user
-    const token = generateToken(userWithoutPassword)
+    const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET || "fallback-secret", {
+      expiresIn: "7d",
+    })
 
-    return { user: userWithoutPassword, token }
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        created_at: user.created_at,
+      },
+      token,
+    }
   } catch (error) {
     console.error("Erro na autenticação:", error)
     return null

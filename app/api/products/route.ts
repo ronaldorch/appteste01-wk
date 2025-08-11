@@ -6,89 +6,97 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search") || ""
     const category = searchParams.get("category") || ""
-    const featured = searchParams.get("featured")
-    const limit = searchParams.get("limit")
+    const strainType = searchParams.get("strain_type") || ""
+    const featured = searchParams.get("featured") === "true"
+    const limit = Number.parseInt(searchParams.get("limit") || "50")
     const sort = searchParams.get("sort") || "name"
 
-    let sql = `
+    let queryText = `
       SELECT 
-        p.*,
-        c.name as category,
-        pi.image_url,
-        pi.alt_text
+        p.id, 
+        p.name, 
+        p.description, 
+        CAST(p.price AS DECIMAL(10,2)) as price,
+        p.stock_quantity,
+        p.slug,
+        p.status,
+        p.featured,
+        p.thc_level,
+        p.cbd_level,
+        p.strain_type,
+        p.effects,
+        p.flavors,
+        p.flowering_time,
+        p.difficulty,
+        c.name as category_name,
+        c.slug as category_slug,
+        COALESCE(pi.image_url, '/placeholder.svg?height=300&width=300&text=🌿') as image_url
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = true
-      WHERE 1=1
+      WHERE p.status = 'active'
     `
 
     const params: any[] = []
-    let paramCount = 0
+    let paramCount = 1
 
     if (search) {
-      paramCount++
-      sql += ` AND (p.name ILIKE $${paramCount} OR p.description ILIKE $${paramCount})`
+      queryText += ` AND (p.name ILIKE $${paramCount} OR p.description ILIKE $${paramCount})`
       params.push(`%${search}%`)
-    }
-
-    if (category && category !== "all") {
       paramCount++
-      sql += ` AND c.slug = $${paramCount}`
+    }
+
+    if (category) {
+      queryText += ` AND c.slug = $${paramCount}`
       params.push(category)
+      paramCount++
     }
 
-    if (featured === "true") {
-      sql += ` AND p.featured = true`
+    if (strainType) {
+      queryText += ` AND p.strain_type = $${paramCount}`
+      params.push(strainType)
+      paramCount++
     }
 
-    // Sorting
+    if (featured) {
+      queryText += ` AND p.featured = true`
+    }
+
+    // Ordenação
     switch (sort) {
       case "price_asc":
-        sql += ` ORDER BY p.price ASC`
+        queryText += ` ORDER BY p.price ASC`
         break
       case "price_desc":
-        sql += ` ORDER BY p.price DESC`
+        queryText += ` ORDER BY p.price DESC`
         break
-      case "newest":
-        sql += ` ORDER BY p.created_at DESC`
+      case "thc_desc":
+        queryText += ` ORDER BY CAST(SUBSTRING(p.thc_level FROM '^[0-9]+') AS INTEGER) DESC NULLS LAST`
         break
       default:
-        sql += ` ORDER BY p.name ASC`
+        queryText += ` ORDER BY p.name ASC`
     }
 
-    if (limit) {
-      paramCount++
-      sql += ` LIMIT $${paramCount}`
-      params.push(Number.parseInt(limit))
-    }
+    queryText += ` LIMIT $${paramCount}`
+    params.push(limit)
 
-    const result = await query(sql, params)
+    const result = await query(queryText, params)
+
+    // Garantir que price seja número
+    const products = result.rows.map((product) => ({
+      ...product,
+      price: Number.parseFloat(product.price) || 0,
+      effects: Array.isArray(product.effects) ? product.effects : [],
+      flavors: Array.isArray(product.flavors) ? product.flavors : [],
+    }))
 
     return NextResponse.json({
-      products: result.rows,
-      total: result.rows.length,
+      success: true,
+      products,
+      total: products.length,
     })
   } catch (error) {
     console.error("Erro ao buscar produtos:", error)
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { name, description, price, stock_quantity, category_id, slug, featured = false } = body
-
-    const result = await query(
-      `INSERT INTO products (name, description, price, stock_quantity, category_id, user_id, slug, featured)
-       VALUES ($1, $2, $3, $4, $5, 1, $6, $7)
-       RETURNING *`,
-      [name, description, price, stock_quantity, category_id, slug, featured],
-    )
-
-    return NextResponse.json(result.rows[0], { status: 201 })
-  } catch (error) {
-    console.error("Erro ao criar produto:", error)
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Erro interno do servidor" }, { status: 500 })
   }
 }

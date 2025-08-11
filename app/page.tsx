@@ -39,6 +39,13 @@ export default function HomePage() {
   }, [])
 
   const createParticles = () => {
+    if (typeof document === "undefined") return
+
+    const existingParticles = document.querySelector(".particles")
+    if (existingParticles) {
+      existingParticles.remove()
+    }
+
     const particlesContainer = document.createElement("div")
     particlesContainer.className = "particles"
     document.body.appendChild(particlesContainer)
@@ -58,7 +65,16 @@ export default function HomePage() {
       const response = await fetch("/api/products?featured=true&limit=6")
       if (response.ok) {
         const data = await response.json()
-        setFeaturedProducts(data.products || [])
+        if (data.success && Array.isArray(data.products)) {
+          // Garantir que price seja número
+          const products = data.products.map((product: any) => ({
+            ...product,
+            price: typeof product.price === "number" ? product.price : Number.parseFloat(product.price) || 0,
+            effects: Array.isArray(product.effects) ? product.effects : [],
+            flavors: Array.isArray(product.flavors) ? product.flavors : [],
+          }))
+          setFeaturedProducts(products)
+        }
       }
     } catch (error) {
       console.error("Erro ao carregar produtos:", error)
@@ -77,11 +93,14 @@ export default function HomePage() {
 
       if (response.ok) {
         // Efeito visual de sucesso
-        const notification = document.createElement("div")
-        notification.innerHTML = "🌿 Adicionado ao carrinho!"
-        notification.className = "fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg z-50 animate-bounce"
-        document.body.appendChild(notification)
-        setTimeout(() => notification.remove(), 3000)
+        if (typeof document !== "undefined") {
+          const notification = document.createElement("div")
+          notification.innerHTML = "🌿 Adicionado ao carrinho!"
+          notification.className =
+            "fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg z-50 animate-bounce"
+          document.body.appendChild(notification)
+          setTimeout(() => notification.remove(), 3000)
+        }
       }
     } catch (error) {
       console.error("Erro ao adicionar ao carrinho:", error)
@@ -312,7 +331,9 @@ export default function HomePage() {
                     {/* Price overlay */}
                     <div className="absolute bottom-4 right-4">
                       <div className="bg-black/80 backdrop-blur-sm rounded-lg px-3 py-2">
-                        <span className="text-2xl font-bold text-green-400">R$ {product.price.toFixed(2)}</span>
+                        <span className="text-2xl font-bold text-green-400">
+                          R$ {typeof product.price === "number" ? product.price.toFixed(2) : "0.00"}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -338,7 +359,7 @@ export default function HomePage() {
                     </div>
 
                     {/* Effects */}
-                    {product.effects && (
+                    {product.effects && product.effects.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-3">
                         {product.effects.slice(0, 3).map((effect, index) => (
                           <Badge key={index} className={`text-xs ${getEffectColor(effect)} text-white`}>

@@ -9,7 +9,7 @@ export interface User {
   name: string
   email: string
   created_at: Date
-  updated_at: Date
+  updated_at?: Date
 }
 
 // Hash da senha com logs
@@ -64,18 +64,11 @@ export function generateToken(user: User): string {
 export async function findUserByEmail(email: string): Promise<User | null> {
   try {
     console.log("🔍 Buscando usuário por email:", email)
-    const result = await query(
-      "SELECT id, name, email, password_hash, created_at, updated_at FROM users WHERE email = $1",
-      [email],
-    )
 
-    if (result.rows.length > 0) {
-      console.log("✅ Usuário encontrado:", { id: result.rows[0].id, email: result.rows[0].email })
-      return result.rows[0]
-    } else {
-      console.log("ℹ️ Usuário não encontrado para email:", email)
-      return null
-    }
+    const result = await query("SELECT id, name, email, created_at FROM users WHERE email = $1", [email])
+
+    console.log("📋 Resultado da busca:", result.rows.length > 0 ? "Encontrado" : "Não encontrado")
+    return result.rows[0] || null
   } catch (error) {
     console.error("❌ Erro ao buscar usuário:", error)
     throw error
@@ -85,40 +78,25 @@ export async function findUserByEmail(email: string): Promise<User | null> {
 // Criar novo usuário com logs detalhados
 export async function createUser(name: string, email: string, password: string): Promise<User | null> {
   try {
-    console.log("👤 Iniciando criação de usuário:", { name, email })
+    console.log("👤 Iniciando criação de usuário...")
+    console.log("📋 Dados:", { name, email, password: "***" })
 
     // 1. Fazer hash da senha
     console.log("🔐 Fazendo hash da senha...")
     const hashedPassword = await hashPassword(password)
-    console.log("✅ Hash da senha concluído")
+    console.log("✅ Senha hasheada com sucesso")
 
     // 2. Inserir no banco
     console.log("💾 Inserindo usuário no banco...")
     const result = await query(
-      `INSERT INTO users (name, email, password_hash, created_at, updated_at) 
-       VALUES ($1, $2, $3, NOW(), NOW()) 
-       RETURNING id, name, email, created_at, updated_at`,
+      "INSERT INTO users (name, email, password, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, name, email, created_at",
       [name, email, hashedPassword],
     )
 
-    if (result.rows.length > 0) {
-      console.log("✅ Usuário criado com sucesso:", {
-        id: result.rows[0].id,
-        name: result.rows[0].name,
-        email: result.rows[0].email,
-      })
-      return result.rows[0]
-    } else {
-      console.log("❌ Nenhuma linha retornada após inserção")
-      return null
-    }
+    console.log("✅ Usuário inserido no banco:", result.rows[0])
+    return result.rows[0]
   } catch (error) {
-    console.error("❌ Erro detalhado ao criar usuário:", {
-      message: error.message,
-      code: error.code,
-      detail: error.detail,
-      constraint: error.constraint,
-    })
+    console.error("❌ Erro detalhado ao criar usuário:", error)
     throw error
   }
 }
