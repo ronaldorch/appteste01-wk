@@ -1,73 +1,57 @@
 -- Criar extensões necessárias
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Tabela de categorias de produtos
-CREATE TABLE IF NOT EXISTS categories (
+-- Tabela de usuários (já criada anteriormente)
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    description TEXT,
-    active BOOLEAN DEFAULT true,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'user',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Tabela de tipos de extração
-CREATE TABLE IF NOT EXISTS extraction_types (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE,
-    description TEXT,
-    color_code VARCHAR(7) DEFAULT '#10B981',
-    active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tabela de templates de genéticas
 CREATE TABLE IF NOT EXISTS genetic_templates (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    strain_type VARCHAR(20) CHECK (strain_type IN ('indica', 'sativa', 'hybrid')),
-    thc_min DECIMAL(4,2) DEFAULT 0,
-    thc_max DECIMAL(4,2) DEFAULT 0,
-    cbd_min DECIMAL(4,2) DEFAULT 0,
-    cbd_max DECIMAL(4,2) DEFAULT 0,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(100) NOT NULL, -- 'flower', 'extract', 'edible'
+    category VARCHAR(100) NOT NULL, -- 'indica', 'sativa', 'hybrid'
+    thc_percentage DECIMAL(5,2),
+    cbd_percentage DECIMAL(5,2),
     description TEXT,
-    effects TEXT[],
-    flavors TEXT[],
-    medical_uses TEXT[],
-    growing_difficulty VARCHAR(20) DEFAULT 'medium',
-    flowering_time_weeks INTEGER,
-    yield_indoor VARCHAR(50),
-    yield_outdoor VARCHAR(50),
-    image_url TEXT,
-    active BOOLEAN DEFAULT true,
+    effects TEXT[], -- Array de efeitos
+    flavors TEXT[], -- Array de sabores
+    medical_uses TEXT[], -- Array de usos medicinais
+    growing_difficulty VARCHAR(50), -- 'easy', 'medium', 'hard'
+    flowering_time VARCHAR(50),
+    yield_info VARCHAR(255),
+    genetics VARCHAR(255), -- Linhagem genética
+    breeder VARCHAR(255),
+    image_url VARCHAR(500),
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabela de produtos (baseados nos templates)
+-- Tabela de produtos (instâncias dos templates com estoque)
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
     template_id INTEGER REFERENCES genetic_templates(id),
-    extraction_type_id INTEGER REFERENCES extraction_types(id),
-    category_id INTEGER REFERENCES categories(id),
-    name VARCHAR(200) NOT NULL,
-    slug VARCHAR(200) UNIQUE NOT NULL,
-    description TEXT,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    extraction_type VARCHAR(100), -- 'ice', 'pac', 'dry', 'rosin', 'live_resin', 'co2', 'butane'
     price_per_gram DECIMAL(10,2) NOT NULL,
-    stock_grams DECIMAL(10,3) DEFAULT 0,
-    min_order_grams DECIMAL(10,3) DEFAULT 1.0,
-    max_order_grams DECIMAL(10,3) DEFAULT 100.0,
-    thc_percentage DECIMAL(4,2),
-    cbd_percentage DECIMAL(4,2),
-    lab_tested BOOLEAN DEFAULT false,
-    lab_report_url TEXT,
+    stock_grams DECIMAL(10,3) DEFAULT 0, -- Estoque em gramas com 3 casas decimais
+    minimum_order DECIMAL(10,3) DEFAULT 0.5, -- Pedido mínimo em gramas
+    maximum_order DECIMAL(10,3) DEFAULT 100, -- Pedido máximo em gramas
+    batch_number VARCHAR(100),
     harvest_date DATE,
-    batch_number VARCHAR(50),
-    image_urls TEXT[],
-    tags TEXT[],
-    featured BOOLEAN DEFAULT false,
-    active BOOLEAN DEFAULT true,
-    auto_deactivate_on_zero_stock BOOLEAN DEFAULT true,
+    lab_tested BOOLEAN DEFAULT false,
+    lab_results JSONB, -- Resultados de laboratório em JSON
+    is_active BOOLEAN DEFAULT true,
+    is_featured BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -76,107 +60,52 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS stock_history (
     id SERIAL PRIMARY KEY,
     product_id INTEGER REFERENCES products(id),
-    change_type VARCHAR(20) CHECK (change_type IN ('add', 'remove', 'sale', 'adjustment')),
-    quantity_grams DECIMAL(10,3) NOT NULL,
-    previous_stock DECIMAL(10,3),
-    new_stock DECIMAL(10,3),
+    change_type VARCHAR(50) NOT NULL, -- 'add', 'remove', 'sale', 'adjustment'
+    quantity_change DECIMAL(10,3) NOT NULL, -- Pode ser negativo
+    previous_stock DECIMAL(10,3) NOT NULL,
+    new_stock DECIMAL(10,3) NOT NULL,
     reason TEXT,
-    user_id INTEGER,
+    user_id INTEGER REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Inserir categorias padrão
-INSERT INTO categories (name, description) VALUES 
-('Flores', 'Flores secas de cannabis premium'),
-('Extrações', 'Concentrados e extratos de cannabis'),
-('Edibles', 'Produtos comestíveis com cannabis'),
-('Acessórios', 'Acessórios para consumo')
-ON CONFLICT (name) DO NOTHING;
+-- Tabela de pedidos
+CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    order_number VARCHAR(100) UNIQUE NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'
+    total_amount DECIMAL(10,2) NOT NULL,
+    payment_method VARCHAR(100),
+    payment_status VARCHAR(50) DEFAULT 'pending',
+    delivery_method VARCHAR(100), -- 'pickup', 'delivery'
+    delivery_address TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
--- Inserir tipos de extração
-INSERT INTO extraction_types (name, description, color_code) VALUES 
-('Ice', 'Extração com gelo e água (Ice Water Hash)', '#3B82F6'),
-('PAC', 'Extração com solvente PAC', '#8B5CF6'),
-('Dry', 'Extração a seco (Dry Sift)', '#F59E0B'),
-('Rosin', 'Extração por pressão e calor', '#EF4444'),
-('Live Resin', 'Extração de planta fresca congelada', '#10B981'),
-('BHO', 'Extração com butano', '#F97316'),
-('CO2', 'Extração com CO2 supercrítico', '#06B6D4')
-ON CONFLICT (name) DO NOTHING;
+-- Tabela de itens do pedido
+CREATE TABLE IF NOT EXISTS order_items (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(id),
+    product_id INTEGER REFERENCES products(id),
+    quantity_grams DECIMAL(10,3) NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    total_price DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
--- Inserir templates de genéticas famosas
-INSERT INTO genetic_templates (
-    name, strain_type, thc_min, thc_max, cbd_min, cbd_max, 
-    description, effects, flavors, medical_uses, 
-    flowering_time_weeks, yield_indoor, yield_outdoor
-) VALUES 
-(
-    'OG Kush', 'hybrid', 20.0, 25.0, 0.1, 0.3,
-    'Lendária strain californiana com efeitos potentes e sabor único',
-    ARRAY['relaxante', 'eufórico', 'criativo', 'feliz'],
-    ARRAY['terroso', 'pinho', 'limão', 'diesel'],
-    ARRAY['ansiedade', 'estresse', 'dor', 'insônia'],
-    8, '400-500g/m²', '500-600g/planta'
-),
-(
-    'White Widow', 'hybrid', 18.0, 25.0, 0.2, 0.5,
-    'Híbrida holandesa clássica com tricomas brancos abundantes',
-    ARRAY['energético', 'criativo', 'eufórico', 'focado'],
-    ARRAY['terroso', 'amadeirado', 'picante', 'doce'],
-    ARRAY['depressão', 'estresse', 'fadiga', 'dor'],
-    9, '450-550g/m²', '550-650g/planta'
-),
-(
-    'Amnesia Haze', 'sativa', 20.0, 25.0, 0.1, 0.2,
-    'Sativa energética com efeitos cerebrais intensos',
-    ARRAY['energético', 'criativo', 'eufórico', 'sociável'],
-    ARRAY['cítrico', 'terroso', 'doce', 'picante'],
-    ARRAY['depressão', 'fadiga', 'estresse', 'falta de apetite'],
-    10, '600-650g/m²', '700-800g/planta'
-),
-(
-    'Northern Lights', 'indica', 16.0, 21.0, 0.1, 0.3,
-    'Indica pura com efeitos relaxantes profundos',
-    ARRAY['relaxante', 'sonolento', 'feliz', 'tranquilo'],
-    ARRAY['doce', 'picante', 'terroso', 'pinho'],
-    ARRAY['insônia', 'dor', 'estresse', 'falta de apetite'],
-    7, '400-500g/m²', '500-600g/planta'
-),
-(
-    'Sour Diesel', 'sativa', 19.0, 25.0, 0.1, 0.2,
-    'Sativa energética com aroma diesel característico',
-    ARRAY['energético', 'criativo', 'eufórico', 'focado'],
-    ARRAY['diesel', 'cítrico', 'terroso', 'picante'],
-    ARRAY['depressão', 'fadiga', 'estresse', 'dor'],
-    10, '450-550g/m²', '600-700g/planta'
-),
-(
-    'Blue Dream', 'hybrid', 17.0, 24.0, 0.1, 0.2,
-    'Híbrida californiana com efeitos equilibrados',
-    ARRAY['relaxante', 'criativo', 'eufórico', 'feliz'],
-    ARRAY['frutas vermelhas', 'doce', 'terroso', 'floral'],
-    ARRAY['dor', 'depressão', 'náusea', 'estresse'],
-    9, '500-600g/m²', '600-700g/planta'
-),
-(
-    'Girl Scout Cookies', 'hybrid', 19.0, 28.0, 0.1, 0.2,
-    'Híbrida potente com sabor doce e efeitos duradouros',
-    ARRAY['relaxante', 'eufórico', 'criativo', 'feliz'],
-    ARRAY['doce', 'terroso', 'menta', 'chocolate'],
-    ARRAY['dor', 'náusea', 'falta de apetite', 'estresse'],
-    9, '400-500g/m²', '500-600g/planta'
-),
-(
-    'Gorilla Glue #4', 'hybrid', 25.0, 30.0, 0.1, 0.1,
-    'Híbrida extremamente potente com efeitos intensos',
-    ARRAY['relaxante', 'eufórico', 'sonolento', 'feliz'],
-    ARRAY['terroso', 'pinho', 'azedo', 'chocolate'],
-    ARRAY['dor', 'insônia', 'estresse', 'depressão'],
-    8, '500-600g/m²', '600-700g/planta'
-)
-ON CONFLICT DO NOTHING;
+-- Criar índices para performance
+CREATE INDEX IF NOT EXISTS idx_products_template_id ON products(template_id);
+CREATE INDEX IF NOT EXISTS idx_products_slug ON products(slug);
+CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);
+CREATE INDEX IF NOT EXISTS idx_stock_history_product_id ON stock_history(product_id);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 
--- Função para atualizar timestamp
+-- Trigger para atualizar updated_at automaticamente
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -185,96 +114,103 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Triggers para atualizar updated_at
+-- Aplicar trigger nas tabelas
 CREATE TRIGGER update_genetic_templates_updated_at BEFORE UPDATE ON genetic_templates FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON products FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Função para auto-desativar produtos sem estoque
-CREATE OR REPLACE FUNCTION auto_deactivate_zero_stock()
+-- Trigger para desativar produto quando estoque zerar
+CREATE OR REPLACE FUNCTION check_stock_and_deactivate()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.stock_grams <= 0 AND NEW.auto_deactivate_on_zero_stock = true THEN
-        NEW.active = false;
-    ELSIF NEW.stock_grams > 0 AND OLD.stock_grams <= 0 AND NEW.auto_deactivate_on_zero_stock = true THEN
-        NEW.active = true;
+    IF NEW.stock_grams <= 0 THEN
+        NEW.is_active = false;
+    ELSIF NEW.stock_grams > 0 AND OLD.stock_grams <= 0 THEN
+        NEW.is_active = true;
     END IF;
     RETURN NEW;
 END;
 $$ language 'plpgsql';
 
--- Trigger para auto-desativação
-CREATE TRIGGER auto_deactivate_products BEFORE UPDATE ON products FOR EACH ROW EXECUTE FUNCTION auto_deactivate_zero_stock();
+CREATE TRIGGER auto_deactivate_on_zero_stock BEFORE UPDATE ON products FOR EACH ROW EXECUTE FUNCTION check_stock_and_deactivate();
 
--- Função para registrar histórico de estoque
-CREATE OR REPLACE FUNCTION log_stock_change()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF TG_OP = 'UPDATE' AND OLD.stock_grams != NEW.stock_grams THEN
-        INSERT INTO stock_history (product_id, change_type, quantity_grams, previous_stock, new_stock, reason)
-        VALUES (
-            NEW.id, 
-            CASE 
-                WHEN NEW.stock_grams > OLD.stock_grams THEN 'add'
-                ELSE 'remove'
-            END,
-            ABS(NEW.stock_grams - OLD.stock_grams),
-            OLD.stock_grams,
-            NEW.stock_grams,
-            'Automatic stock update'
-        );
-    END IF;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
+-- Inserir templates de genéticas populares
+INSERT INTO genetic_templates (name, type, category, thc_percentage, cbd_percentage, description, effects, flavors, medical_uses, growing_difficulty, flowering_time, yield_info, genetics, breeder) VALUES
+('OG Kush', 'flower', 'hybrid', 24.5, 0.3, 'Lendária strain híbrida com efeitos potentes e sabor único', 
+ ARRAY['relaxante', 'eufórico', 'criativo', 'feliz'], 
+ ARRAY['terroso', 'pinho', 'limão', 'diesel'], 
+ ARRAY['ansiedade', 'estresse', 'dor', 'insônia'], 
+ 'medium', '8-9 semanas', '400-500g/m²', 'Chemdawg x Lemon Thai x Pakistani Kush', 'Imperial Genetics'),
 
--- Trigger para histórico de estoque
-CREATE TRIGGER log_stock_changes AFTER UPDATE ON products FOR EACH ROW EXECUTE FUNCTION log_stock_change();
+('White Widow', 'flower', 'hybrid', 20.0, 0.5, 'Híbrida balanceada famosa mundialmente por sua potência', 
+ ARRAY['energético', 'criativo', 'social', 'focado'], 
+ ARRAY['doce', 'terroso', 'amadeirado', 'especiarias'], 
+ ARRAY['depressão', 'fadiga', 'estresse', 'dor'], 
+ 'easy', '8-10 semanas', '450-550g/m²', 'Brazilian Sativa x South Indian Indica', 'Green House Seeds'),
 
--- Criar alguns produtos exemplo baseados nos templates
-INSERT INTO products (
-    template_id, extraction_type_id, category_id, name, slug, 
-    description, price_per_gram, stock_grams, thc_percentage, cbd_percentage
-)
+('Amnesia Haze', 'flower', 'sativa', 22.0, 0.1, 'Sativa energética com efeitos cerebrais intensos', 
+ ARRAY['energético', 'criativo', 'eufórico', 'motivador'], 
+ ARRAY['cítrico', 'terroso', 'doce', 'especiarias'], 
+ ARRAY['depressão', 'fadiga', 'estresse', 'TDAH'], 
+ 'hard', '10-12 semanas', '600-700g/m²', 'Cambodian x Jamaican', 'Soma Seeds'),
+
+('Granddaddy Purple', 'flower', 'indica', 17.0, 0.7, 'Indica relaxante com coloração roxa característica', 
+ ARRAY['relaxante', 'sonolento', 'feliz', 'calmante'], 
+ ARRAY['uva', 'frutas vermelhas', 'doce', 'terroso'], 
+ ARRAY['insônia', 'dor', 'estresse', 'perda de apetite'], 
+ 'easy', '8-11 semanas', '300-400g/m²', 'Purple Urkle x Big Bud', 'Ken Estes'),
+
+('Sour Diesel', 'flower', 'sativa', 25.0, 0.2, 'Sativa energética com aroma diesel característico', 
+ ARRAY['energético', 'criativo', 'eufórico', 'social'], 
+ ARRAY['diesel', 'cítrico', 'terroso', 'pungente'], 
+ ARRAY['depressão', 'fadiga', 'estresse', 'dor'], 
+ 'medium', '10-11 semanas', '450-550g/m²', 'Chemdawg 91 x Super Skunk', 'DNA Genetics')
+
+ON CONFLICT DO NOTHING;
+
+-- Inserir alguns produtos baseados nos templates
+INSERT INTO products (template_id, name, slug, extraction_type, price_per_gram, stock_grams, batch_number, harvest_date, lab_tested) 
 SELECT 
     gt.id,
-    et.id,
-    c.id,
-    gt.name || ' - ' || et.name,
-    LOWER(REPLACE(REPLACE(gt.name || '-' || et.name, ' ', '-'), '#', '')),
-    'Produto premium de ' || gt.name || ' extraído com método ' || et.name,
-    CASE et.name
-        WHEN 'Ice' THEN 45.00
-        WHEN 'PAC' THEN 55.00
-        WHEN 'Dry' THEN 35.00
-        WHEN 'Rosin' THEN 65.00
-        WHEN 'Live Resin' THEN 75.00
-        ELSE 50.00
+    gt.name || ' - Flower',
+    LOWER(REPLACE(gt.name, ' ', '-')) || '-flower',
+    'dry',
+    CASE 
+        WHEN gt.category = 'sativa' THEN 45.00
+        WHEN gt.category = 'indica' THEN 40.00
+        ELSE 42.50
     END,
-    ROUND((RANDOM() * 50 + 10)::numeric, 3),
-    gt.thc_max,
-    gt.cbd_max
+    ROUND((RANDOM() * 50 + 10)::numeric, 3), -- Entre 10 e 60 gramas
+    'BATCH-' || LPAD((RANDOM() * 9999)::int::text, 4, '0'),
+    CURRENT_DATE - (RANDOM() * 30)::int,
+    true
 FROM genetic_templates gt
-CROSS JOIN extraction_types et
-JOIN categories c ON c.name = 'Extrações'
-WHERE gt.id <= 4 AND et.id <= 3
-ON CONFLICT (slug) DO NOTHING;
+WHERE gt.type = 'flower'
+ON CONFLICT DO NOTHING;
 
--- Índices para performance
-CREATE INDEX IF NOT EXISTS idx_products_active ON products(active);
-CREATE INDEX IF NOT EXISTS idx_products_featured ON products(featured);
-CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
-CREATE INDEX IF NOT EXISTS idx_products_template ON products(template_id);
-CREATE INDEX IF NOT EXISTS idx_products_stock ON products(stock_grams);
-CREATE INDEX IF NOT EXISTS idx_stock_history_product ON stock_history(product_id);
-CREATE INDEX IF NOT EXISTS idx_stock_history_date ON stock_history(created_at);
+-- Inserir extrações baseadas nos templates
+INSERT INTO products (template_id, name, slug, extraction_type, price_per_gram, stock_grams, batch_number, harvest_date, lab_tested) 
+SELECT 
+    gt.id,
+    gt.name || ' - Ice Hash',
+    LOWER(REPLACE(gt.name, ' ', '-')) || '-ice-hash',
+    'ice',
+    CASE 
+        WHEN gt.category = 'sativa' THEN 120.00
+        WHEN gt.category = 'indica' THEN 110.00
+        ELSE 115.00
+    END,
+    ROUND((RANDOM() * 10 + 2)::numeric, 3), -- Entre 2 e 12 gramas
+    'ICE-' || LPAD((RANDOM() * 9999)::int::text, 4, '0'),
+    CURRENT_DATE - (RANDOM() * 15)::int,
+    true
+FROM genetic_templates gt
+WHERE gt.type = 'flower'
+LIMIT 3
+ON CONFLICT DO NOTHING;
 
--- Verificar se tudo foi criado
-SELECT 'Tables created:' as info;
-SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
-
-SELECT 'Sample data:' as info;
-SELECT COUNT(*) as genetic_templates FROM genetic_templates;
-SELECT COUNT(*) as extraction_types FROM extraction_types;
-SELECT COUNT(*) as categories FROM categories;
-SELECT COUNT(*) as products FROM products;
+-- Verificar dados inseridos
+SELECT 'Setup completo!' as status;
+SELECT COUNT(*) as total_templates FROM genetic_templates;
+SELECT COUNT(*) as total_products FROM products;
+SELECT COUNT(*) as total_users FROM users;

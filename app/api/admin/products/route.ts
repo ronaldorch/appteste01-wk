@@ -7,83 +7,64 @@ export async function GET() {
       SELECT 
         p.*,
         gt.name as template_name,
-        gt.strain_type,
-        et.name as extraction_type,
-        et.color_code,
-        c.name as category_name
+        gt.category,
+        gt.type as template_type
       FROM products p
-      LEFT JOIN genetic_templates gt ON p.template_id = gt.id
-      LEFT JOIN extraction_types et ON p.extraction_type_id = et.id
-      LEFT JOIN categories c ON p.category_id = c.id
+      JOIN genetic_templates gt ON p.template_id = gt.id
       ORDER BY p.created_at DESC
     `)
 
-    return NextResponse.json({
-      success: true,
-      products: result.rows,
-    })
+    return NextResponse.json(result.rows)
   } catch (error) {
     console.error("Error fetching products:", error)
-    return NextResponse.json({ success: false, error: "Failed to fetch products" }, { status: 500 })
+    return NextResponse.json({ error: "Erro ao buscar produtos" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
     const {
       template_id,
-      extraction_type_id,
-      category_id,
       name,
+      slug,
+      extraction_type,
       price_per_gram,
       stock_grams,
-      thc_percentage,
-      cbd_percentage,
-      description,
-      min_order_grams,
-      max_order_grams,
-    } = body
-
-    // Gerar slug único
-    const slug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
+      minimum_order,
+      maximum_order,
+      batch_number,
+      harvest_date,
+      lab_tested,
+      lab_results,
+    } = await request.json()
 
     const result = await query(
       `
       INSERT INTO products (
-        template_id, extraction_type_id, category_id,
-        name, slug, price_per_gram, stock_grams, 
-        thc_percentage, cbd_percentage, description,
-        min_order_grams, max_order_grams
+        template_id, name, slug, extraction_type, price_per_gram, stock_grams,
+        minimum_order, maximum_order, batch_number, harvest_date, lab_tested, lab_results
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `,
       [
         template_id,
-        extraction_type_id,
-        category_id,
         name,
         slug,
+        extraction_type,
         price_per_gram,
         stock_grams,
-        thc_percentage,
-        cbd_percentage,
-        description,
-        min_order_grams || 1.0,
-        max_order_grams || 100.0,
+        minimum_order,
+        maximum_order,
+        batch_number,
+        harvest_date,
+        lab_tested,
+        lab_results,
       ],
     )
 
-    return NextResponse.json({
-      success: true,
-      product: result.rows[0],
-    })
+    return NextResponse.json(result.rows[0], { status: 201 })
   } catch (error) {
     console.error("Error creating product:", error)
-    return NextResponse.json({ success: false, error: "Failed to create product" }, { status: 500 })
+    return NextResponse.json({ error: "Erro ao criar produto" }, { status: 500 })
   }
 }

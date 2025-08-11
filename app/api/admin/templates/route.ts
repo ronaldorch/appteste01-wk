@@ -6,75 +6,72 @@ export async function GET() {
     const result = await query(`
       SELECT 
         gt.*,
-        COUNT(p.id) as products_count,
-        SUM(CASE WHEN p.active = true THEN 1 ELSE 0 END) as active_products
+        COUNT(p.id) as product_count,
+        COALESCE(SUM(p.stock_grams), 0) as total_stock
       FROM genetic_templates gt
-      LEFT JOIN products p ON p.template_id = gt.id
+      LEFT JOIN products p ON gt.id = p.template_id AND p.is_active = true
       GROUP BY gt.id
-      ORDER BY gt.name
+      ORDER BY gt.created_at DESC
     `)
 
-    return NextResponse.json({
-      success: true,
-      templates: result.rows,
-    })
+    return NextResponse.json(result.rows)
   } catch (error) {
     console.error("Error fetching templates:", error)
-    return NextResponse.json({ success: false, error: "Failed to fetch templates" }, { status: 500 })
+    return NextResponse.json({ error: "Erro ao buscar templates" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
     const {
       name,
-      strain_type,
-      thc_min,
-      thc_max,
-      cbd_min,
-      cbd_max,
+      type,
+      category,
+      thc_percentage,
+      cbd_percentage,
       description,
       effects,
       flavors,
       medical_uses,
-      flowering_time_weeks,
-      yield_indoor,
-      yield_outdoor,
-    } = body
+      growing_difficulty,
+      flowering_time,
+      yield_info,
+      genetics,
+      breeder,
+      image_url,
+    } = await request.json()
 
     const result = await query(
       `
       INSERT INTO genetic_templates (
-        name, strain_type, thc_min, thc_max, cbd_min, cbd_max,
-        description, effects, flavors, medical_uses,
-        flowering_time_weeks, yield_indoor, yield_outdoor
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        name, type, category, thc_percentage, cbd_percentage, description,
+        effects, flavors, medical_uses, growing_difficulty, flowering_time,
+        yield_info, genetics, breeder, image_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `,
       [
         name,
-        strain_type,
-        thc_min,
-        thc_max,
-        cbd_min,
-        cbd_max,
+        type,
+        category,
+        thc_percentage,
+        cbd_percentage,
         description,
         effects,
         flavors,
         medical_uses,
-        flowering_time_weeks,
-        yield_indoor,
-        yield_outdoor,
+        growing_difficulty,
+        flowering_time,
+        yield_info,
+        genetics,
+        breeder,
+        image_url,
       ],
     )
 
-    return NextResponse.json({
-      success: true,
-      template: result.rows[0],
-    })
+    return NextResponse.json(result.rows[0], { status: 201 })
   } catch (error) {
     console.error("Error creating template:", error)
-    return NextResponse.json({ success: false, error: "Failed to create template" }, { status: 500 })
+    return NextResponse.json({ error: "Erro ao criar template" }, { status: 500 })
   }
 }
