@@ -16,6 +16,7 @@ export interface AuthResult {
 
 export async function createUser(name: string, email: string, password: string): Promise<User | null> {
   try {
+    console.log("Creating user:", { name, email })
     const hashedPassword = await bcrypt.hash(password, 12)
 
     const result = await query(
@@ -23,28 +24,33 @@ export async function createUser(name: string, email: string, password: string):
       [name, email, hashedPassword],
     )
 
+    console.log("User created successfully:", result.rows[0])
     return result.rows[0]
   } catch (error) {
-    console.error("Erro ao criar usuário:", error)
+    console.error("Error creating user:", error)
     return null
   }
 }
 
 export async function findUserByEmail(email: string): Promise<User | null> {
   try {
+    console.log("Finding user by email:", email)
     const result = await query("SELECT id, name, email, created_at FROM users WHERE email = $1", [email])
+    console.log("User found:", result.rows[0] || "No user found")
     return result.rows[0] || null
   } catch (error) {
-    console.error("Erro ao buscar usuário:", error)
+    console.error("Error finding user:", error)
     return null
   }
 }
 
 export async function authenticateUser(email: string, password: string): Promise<AuthResult | null> {
   try {
+    console.log("Authenticating user:", email)
     const result = await query("SELECT id, name, email, password FROM users WHERE email = $1", [email])
 
     if (result.rows.length === 0) {
+      console.log("User not found")
       return null
     }
 
@@ -52,6 +58,7 @@ export async function authenticateUser(email: string, password: string): Promise
     const isValidPassword = await bcrypt.compare(password, user.password)
 
     if (!isValidPassword) {
+      console.log("Invalid password")
       return null
     }
 
@@ -59,6 +66,7 @@ export async function authenticateUser(email: string, password: string): Promise
       expiresIn: "7d",
     })
 
+    console.log("User authenticated successfully")
     return {
       user: {
         id: user.id,
@@ -69,7 +77,7 @@ export async function authenticateUser(email: string, password: string): Promise
       token,
     }
   } catch (error) {
-    console.error("Erro na autenticação:", error)
+    console.error("Error authenticating user:", error)
     return null
   }
 }

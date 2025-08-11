@@ -1,36 +1,44 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { authenticateUser } from "@/lib/auth"
+import { testConnection } from "@/lib/database"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    console.log("=== LOGIN API CALLED ===")
 
+    // Test database connection first
+    const dbConnected = await testConnection()
+    if (!dbConnected) {
+      console.error("Database connection failed")
+      return NextResponse.json({ error: "Erro de conexão com o banco de dados" }, { status: 500 })
+    }
+
+    const { email, password } = await request.json()
+    console.log("Login attempt:", { email, passwordLength: password?.length })
+
+    // Basic validation
     if (!email || !password) {
+      console.log("Missing email or password")
       return NextResponse.json({ error: "Email e senha são obrigatórios" }, { status: 400 })
     }
 
-    const result = await authenticateUser(email, password)
+    // Authenticate user
+    console.log("Authenticating user...")
+    const authResult = await authenticateUser(email, password)
 
-    if (!result) {
-      return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 })
+    if (!authResult) {
+      console.log("Authentication failed")
+      return NextResponse.json({ error: "Email ou senha inválidos" }, { status: 401 })
     }
 
-    const response = NextResponse.json({
+    console.log("User authenticated successfully:", authResult.user.id)
+    return NextResponse.json({
       message: "Login realizado com sucesso",
-      user: result.user,
+      user: authResult.user,
+      token: authResult.token,
     })
-
-    // Definir cookie com o token JWT
-    response.cookies.set("token", result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60 * 24 * 7, // 7 dias
-    })
-
-    return response
   } catch (error) {
-    console.error("Erro no login:", error)
+    console.error("Login error:", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
