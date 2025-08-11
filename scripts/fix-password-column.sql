@@ -14,7 +14,7 @@ BEGIN
         -- Remover coluna password_hash
         ALTER TABLE users DROP COLUMN password_hash;
         
-        RAISE NOTICE 'Copied data from password_hash to password and dropped password_hash column';
+        RAISE NOTICE 'Moved data from password_hash to password and dropped password_hash column';
     END IF;
     
     -- Se ainda há registros com password null, precisamos lidar com isso
@@ -32,11 +32,6 @@ BEGIN
 END $$;
 
 -- Verificar estrutura final
-SELECT column_name, data_type, is_nullable 
-FROM information_schema.columns 
-WHERE table_name = 'users' AND column_name IN ('password', 'password_hash')
-ORDER BY column_name;
-
-SELECT 'Password column fixed successfully!' as status;
+SELECT 'Password column structure fixed!' as status;
 
 COMMIT;

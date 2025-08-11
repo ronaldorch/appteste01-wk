@@ -1,17 +1,11 @@
 -- Verificar estrutura atual da tabela users
 \d users;
 
--- Verificar dados existentes
-SELECT 
-    id, 
-    name, 
-    email, 
-    CASE WHEN password IS NOT NULL THEN 'HAS_PASSWORD' ELSE 'NO_PASSWORD' END as password_status,
-    CASE WHEN password_hash IS NOT NULL THEN 'HAS_PASSWORD_HASH' ELSE 'NO_PASSWORD_HASH' END as password_hash_status,
-    role,
-    created_at
-FROM users 
-LIMIT 5;
+-- Mostrar todas as colunas e tipos
+SELECT column_name, data_type, is_nullable 
+FROM information_schema.columns 
+WHERE table_name = 'users' 
+ORDER BY ordinal_position;
 
--- Contar registros
+-- Verificar dados existentes
 SELECT COUNT(*) as total_users FROM users;

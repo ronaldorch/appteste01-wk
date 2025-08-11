@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { ShoppingCart, Search, Star, Zap, Leaf, Sparkles, Eye, Brain, Heart } from "lucide-react"
+import { ShoppingCart, Search, Star, Zap, Leaf, Eye, Brain, Heart } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -148,7 +148,7 @@ export default function HomePage() {
             <div className="flex items-center space-x-4">
               <div className="floating-bud">
                 <Image
-                  src="/logo-estacao-fumaça.png"
+                  src="/icons/cannabis-bud.png"
                   alt="Estação da Fumaça"
                   width={80}
                   height={80}
@@ -205,7 +205,7 @@ export default function HomePage() {
             <div className="flex justify-center space-x-6 mb-12">
               <Link href="/produtos">
                 <Button size="lg" className="cannabis-button text-xl px-10 py-4 smoke-effect">
-                  <Sparkles className="h-6 w-6 mr-3" />
+                  <Image src="/icons/cannabis-bud.png" alt="" width={24} height={24} className="mr-3" />
                   Ver Genéticas
                 </Button>
               </Link>
@@ -251,7 +251,7 @@ export default function HomePage() {
               <Card className="bud-card hover:shadow-xl transition-all duration-300 cursor-pointer group">
                 <CardHeader className="text-center pb-8">
                   <div className="mx-auto w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <Leaf className="h-10 w-10 text-white" />
+                    <Image src="/icons/cannabis-bud.png" alt="Flores" width={40} height={40} />
                   </div>
                   <CardTitle className="text-green-400 text-2xl brand-font">Flores Premium</CardTitle>
                   <CardDescription className="text-green-200 text-lg">
@@ -265,7 +265,7 @@ export default function HomePage() {
               <Card className="bud-card hover:shadow-xl transition-all duration-300 cursor-pointer group">
                 <CardHeader className="text-center pb-8">
                   <div className="mx-auto w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <Sparkles className="h-10 w-10 text-white" />
+                    <Image src="/icons/hash-extraction.png" alt="Extrações" width={40} height={40} />
                   </div>
                   <CardTitle className="text-orange-400 text-2xl brand-font">Extrações</CardTitle>
                   <CardDescription className="text-green-200 text-lg">
@@ -407,7 +407,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center bud-card p-8 rounded-xl">
               <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
-                <Leaf className="h-10 w-10 text-white" />
+                <Image src="/icons/cannabis-bud.png" alt="Qualidade" width={40} height={40} />
               </div>
               <h4 className="text-2xl font-semibold mb-4 text-orange-400 brand-font">Qualidade Premium</h4>
               <p className="text-green-200">Genéticas selecionadas, curadas com perfeição. Só o que há de melhor.</p>
@@ -440,7 +440,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-3 mb-6">
-                <Image src="/logo-estacao-fumaça.png" alt="Estação da Fumaça" width={50} height={50} />
+                <Image src="/icons/cannabis-bud.png" alt="Estação da Fumaça" width={50} height={50} />
                 <div>
                   <span className="text-2xl font-bold brand-font text-green-400">Estação da Fumaça</span>
                   <p className="text-orange-300 street-font">Da boca pra sua porta</p>
@@ -453,13 +453,15 @@ export default function HomePage() {
               <h4 className="font-semibold mb-4 text-orange-400 brand-font text-lg">Produtos</h4>
               <ul className="space-y-2 text-green-200">
                 <li>
-                  <Link href="/produtos?category=flores" className="hover:text-orange-300">
-                    🌿 Flores Premium
+                  <Link href="/produtos?category=flores" className="hover:text-orange-300 flex items-center gap-2">
+                    <Image src="/icons/cannabis-bud.png" alt="" width={16} height={16} />
+                    Flores Premium
                   </Link>
                 </li>
                 <li>
-                  <Link href="/produtos?category=extracoes" className="hover:text-orange-300">
-                    🍯 Extrações
+                  <Link href="/produtos?category=extracoes" className="hover:text-orange-300 flex items-center gap-2">
+                    <Image src="/icons/hash-extraction.png" alt="" width={16} height={16} />
+                    Extrações
                   </Link>
                 </li>
                 <li>
