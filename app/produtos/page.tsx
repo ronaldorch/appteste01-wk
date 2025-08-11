@@ -139,7 +139,7 @@ export default function ProductsPage() {
             <Link href="/" className="flex items-center space-x-4">
               <div className="floating-bud">
                 <Image
-                  src="/logo-estacao-fumaça.png"
+                  src="/icons/cannabis-bud.png"
                   alt="Estação da Fumaça"
                   width={60}
                   height={60}
@@ -196,8 +196,18 @@ export default function ProductsPage() {
               </SelectTrigger>
               <SelectContent className="bg-green-900 border-green-500">
                 <SelectItem value="all">Todas as Categorias</SelectItem>
-                <SelectItem value="flores">🌿 Flores</SelectItem>
-                <SelectItem value="extracoes">🍯 Extrações</SelectItem>
+                <SelectItem value="flores">
+                  <div className="flex items-center gap-2">
+                    <Image src="/icons/cannabis-bud.png" alt="" width={16} height={16} />
+                    Flores
+                  </div>
+                </SelectItem>
+                <SelectItem value="extracoes">
+                  <div className="flex items-center gap-2">
+                    <Image src="/icons/hash-extraction.png" alt="" width={16} height={16} />
+                    Extrações
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
 
