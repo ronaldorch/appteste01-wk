@@ -7,15 +7,25 @@ export async function GET() {
 
     const result = await query(`
       SELECT 
-        id, name, category, thc_percentage, cbd_percentage, 
-        effects, flavors, medical_uses, description, 
-        is_active, created_at, updated_at
+        id,
+        name,
+        type,
+        category,
+        thc_percentage,
+        cbd_percentage,
+        effects,
+        flavors,
+        medical_uses,
+        description,
+        is_active,
+        created_at,
+        updated_at
       FROM genetic_templates 
       ORDER BY name ASC
     `)
 
     console.log(`✅ Found ${result.rows.length} templates`)
-    return NextResponse.json(result.rows)
+    return NextResponse.json({ templates: result.rows })
   } catch (error) {
     console.error("❌ Error fetching templates:", error)
     return NextResponse.json({ error: "Erro ao buscar templates" }, { status: 500 })
@@ -26,25 +36,25 @@ export async function POST(request: NextRequest) {
   try {
     console.log("🆕 Creating new genetic template...")
 
-    const body = await request.json()
-    const { name, category, thc_percentage, cbd_percentage, effects, flavors, medical_uses, description } = body
+    const { name, type, category, thc_percentage, cbd_percentage, effects, flavors, medical_uses, description } =
+      await request.json()
 
-    // Validation
-    if (!name || !category) {
-      return NextResponse.json({ error: "Nome e categoria são obrigatórios" }, { status: 400 })
+    // Validação básica
+    if (!name || !type || !category) {
+      return NextResponse.json({ error: "Nome, tipo e categoria são obrigatórios" }, { status: 400 })
     }
 
     const result = await query(
       `
       INSERT INTO genetic_templates (
-        name, category, thc_percentage, cbd_percentage, 
-        effects, flavors, medical_uses, description, 
-        is_active, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NOW(), NOW())
+        name, type, category, thc_percentage, cbd_percentage,
+        effects, flavors, medical_uses, description, is_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)
       RETURNING *
     `,
       [
         name,
+        type,
         category,
         thc_percentage || 0,
         cbd_percentage || 0,
@@ -56,7 +66,7 @@ export async function POST(request: NextRequest) {
     )
 
     console.log("✅ Template created:", result.rows[0])
-    return NextResponse.json(result.rows[0], { status: 201 })
+    return NextResponse.json({ template: result.rows[0] }, { status: 201 })
   } catch (error) {
     console.error("❌ Error creating template:", error)
     return NextResponse.json({ error: "Erro ao criar template" }, { status: 500 })
@@ -67,10 +77,10 @@ export async function PUT(request: NextRequest) {
   try {
     console.log("📝 Updating genetic template...")
 
-    const body = await request.json()
     const {
       id,
       name,
+      type,
       category,
       thc_percentage,
       cbd_percentage,
@@ -79,7 +89,7 @@ export async function PUT(request: NextRequest) {
       medical_uses,
       description,
       is_active,
-    } = body
+    } = await request.json()
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 })
@@ -89,14 +99,15 @@ export async function PUT(request: NextRequest) {
       `
       UPDATE genetic_templates SET
         name = $2,
-        category = $3,
-        thc_percentage = $4,
-        cbd_percentage = $5,
-        effects = $6,
-        flavors = $7,
-        medical_uses = $8,
-        description = $9,
-        is_active = $10,
+        type = $3,
+        category = $4,
+        thc_percentage = $5,
+        cbd_percentage = $6,
+        effects = $7,
+        flavors = $8,
+        medical_uses = $9,
+        description = $10,
+        is_active = $11,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
@@ -104,14 +115,15 @@ export async function PUT(request: NextRequest) {
       [
         id,
         name,
+        type,
         category,
-        thc_percentage || 0,
-        cbd_percentage || 0,
-        effects || [],
-        flavors || [],
-        medical_uses || [],
-        description || "",
-        is_active !== undefined ? is_active : true,
+        thc_percentage,
+        cbd_percentage,
+        effects,
+        flavors,
+        medical_uses,
+        description,
+        is_active,
       ],
     )
 
@@ -120,7 +132,7 @@ export async function PUT(request: NextRequest) {
     }
 
     console.log("✅ Template updated:", result.rows[0])
-    return NextResponse.json(result.rows[0])
+    return NextResponse.json({ template: result.rows[0] })
   } catch (error) {
     console.error("❌ Error updating template:", error)
     return NextResponse.json({ error: "Erro ao atualizar template" }, { status: 500 })
@@ -136,7 +148,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 })
     }
 
-    console.log("🗑️ Deleting genetic template:", id)
+    console.log("🗑️ Deleting template:", id)
 
     const result = await query("DELETE FROM genetic_templates WHERE id = $1 RETURNING *", [id])
 
@@ -144,10 +156,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Template não encontrado" }, { status: 404 })
     }
 
-    console.log("✅ Template deleted:", result.rows[0])
-    return NextResponse.json({ message: "Template deletado com sucesso" })
+    console.log("✅ Template deleted")
+    return NextResponse.json({ message: "Template removido com sucesso" })
   } catch (error) {
     console.error("❌ Error deleting template:", error)
-    return NextResponse.json({ error: "Erro ao deletar template" }, { status: 500 })
+    return NextResponse.json({ error: "Erro ao remover template" }, { status: 500 })
   }
 }

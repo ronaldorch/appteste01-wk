@@ -7,14 +7,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Edit, Trash2, Package, Leaf } from "lucide-react"
+import { Plus, Edit, Trash2, Package, Leaf, Beaker } from "lucide-react"
 
 interface GeneticTemplate {
   id: number
   name: string
+  type: string
   category: string
   thc_percentage: number
   cbd_percentage: number
@@ -29,35 +31,34 @@ interface GeneticTemplate {
 
 interface Product {
   id: number
+  template_id: number
   name: string
   slug: string
   extraction_type: string
   price: number
   stock_grams: number
+  description: string
   is_active: boolean
   template_name: string
+  template_type: string
   template_category: string
-  created_at: string
 }
-
-const CATEGORIES = ["Indica", "Sativa", "Híbrida"]
-const EXTRACTION_TYPES = ["Ice", "PAC", "Dry", "Rosin", "Live Resin", "Bubble Hash"]
-const EFFECTS = ["Relaxante", "Energizante", "Criativo", "Focado", "Eufórico", "Sedativo", "Analgésico"]
-const FLAVORS = ["Citrus", "Doce", "Terroso", "Pinho", "Frutal", "Diesel", "Skunk", "Floral"]
-const MEDICAL_USES = ["Ansiedade", "Dor", "Insônia", "Depressão", "Náusea", "Inflamação", "Epilepsia"]
 
 export default function AdminTemplatesPage() {
   const [templates, setTemplates] = useState<GeneticTemplate[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const [editingTemplate, setEditingTemplate] = useState<GeneticTemplate | null>(null)
   const [showTemplateForm, setShowTemplateForm] = useState(false)
   const [showProductForm, setShowProductForm] = useState(false)
 
-  // Template form state
+  // Form states
   const [templateForm, setTemplateForm] = useState({
     name: "",
-    category: "",
+    type: "indica",
+    category: "premium",
     thc_percentage: 0,
     cbd_percentage: 0,
     effects: [] as string[],
@@ -66,67 +67,118 @@ export default function AdminTemplatesPage() {
     description: "",
   })
 
-  // Product form state
   const [productForm, setProductForm] = useState({
     template_id: "",
     name: "",
-    extraction_type: "",
+    extraction_type: "dry",
     price: 0,
     stock_grams: 0,
     description: "",
   })
 
+  const extractionTypes = [
+    { value: "dry", label: "Dry (Seco)" },
+    { value: "ice", label: "Ice Water Hash" },
+    { value: "pac", label: "PAC (Prensado)" },
+    { value: "rosin", label: "Rosin" },
+    { value: "live_resin", label: "Live Resin" },
+    { value: "bubble_hash", label: "Bubble Hash" },
+  ]
+
+  const effectOptions = [
+    "Relaxante",
+    "Eufórico",
+    "Criativo",
+    "Energético",
+    "Sonolento",
+    "Focado",
+    "Feliz",
+    "Calmante",
+    "Estimulante",
+    "Medicinal",
+  ]
+
+  const flavorOptions = [
+    "Citrus",
+    "Doce",
+    "Terroso",
+    "Pinho",
+    "Floral",
+    "Frutado",
+    "Diesel",
+    "Skunk",
+    "Mentolado",
+    "Picante",
+    "Amadeirado",
+  ]
+
+  const medicalOptions = [
+    "Ansiedade",
+    "Depressão",
+    "Dor Crônica",
+    "Insônia",
+    "Estresse",
+    "Náusea",
+    "Perda de Apetite",
+    "Epilepsia",
+    "Glaucoma",
+    "Artrite",
+  ]
+
   useEffect(() => {
-    fetchTemplates()
-    fetchProducts()
+    fetchData()
   }, [])
 
-  const fetchTemplates = async () => {
+  const fetchData = async () => {
     try {
-      const response = await fetch("/api/admin/templates")
-      if (response.ok) {
-        const data = await response.json()
-        setTemplates(data)
+      setLoading(true)
+      const [templatesRes, productsRes] = await Promise.all([
+        fetch("/api/admin/templates"),
+        fetch("/api/admin/products"),
+      ])
+
+      if (templatesRes.ok) {
+        const templatesData = await templatesRes.json()
+        setTemplates(templatesData.templates || [])
       }
-    } catch (error) {
-      console.error("Error fetching templates:", error)
+
+      if (productsRes.ok) {
+        const productsData = await productsRes.json()
+        setProducts(productsData.products || [])
+      }
+    } catch (err) {
+      setError("Erro ao carregar dados")
+      console.error(err)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchProducts = async () => {
-    try {
-      const response = await fetch("/api/admin/products")
-      if (response.ok) {
-        const data = await response.json()
-        setProducts(data)
-      }
-    } catch (error) {
-      console.error("Error fetching products:", error)
     }
   }
 
   const handleTemplateSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const url = editingTemplate ? "/api/admin/templates" : "/api/admin/templates"
       const method = editingTemplate ? "PUT" : "POST"
       const body = editingTemplate ? { ...templateForm, id: editingTemplate.id } : templateForm
 
-      const response = await fetch(url, {
+      const response = await fetch("/api/admin/templates", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       })
 
       if (response.ok) {
-        fetchTemplates()
-        resetTemplateForm()
+        setSuccess(editingTemplate ? "Template atualizado!" : "Template criado!")
         setShowTemplateForm(false)
+        setEditingTemplate(null)
+        resetTemplateForm()
+        fetchData()
+      } else {
+        const data = await response.json()
+        setError(data.error || "Erro ao salvar template")
       }
-    } catch (error) {
-      console.error("Error saving template:", error)
+    } catch (err) {
+      setError("Erro ao salvar template")
+      console.error(err)
     }
   }
 
@@ -140,27 +192,37 @@ export default function AdminTemplatesPage() {
       })
 
       if (response.ok) {
-        fetchProducts()
-        resetProductForm()
+        setSuccess("Produto criado!")
         setShowProductForm(false)
+        resetProductForm()
+        fetchData()
+      } else {
+        const data = await response.json()
+        setError(data.error || "Erro ao criar produto")
       }
-    } catch (error) {
-      console.error("Error creating product:", error)
+    } catch (err) {
+      setError("Erro ao criar produto")
+      console.error(err)
     }
   }
 
   const handleDeleteTemplate = async (id: number) => {
-    if (confirm("Tem certeza que deseja deletar este template?")) {
-      try {
-        const response = await fetch(`/api/admin/templates?id=${id}`, {
-          method: "DELETE",
-        })
-        if (response.ok) {
-          fetchTemplates()
-        }
-      } catch (error) {
-        console.error("Error deleting template:", error)
+    if (!confirm("Tem certeza que deseja excluir este template?")) return
+
+    try {
+      const response = await fetch(`/api/admin/templates?id=${id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setSuccess("Template excluído!")
+        fetchData()
+      } else {
+        setError("Erro ao excluir template")
       }
+    } catch (err) {
+      setError("Erro ao excluir template")
+      console.error(err)
     }
   }
 
@@ -168,6 +230,7 @@ export default function AdminTemplatesPage() {
     setEditingTemplate(template)
     setTemplateForm({
       name: template.name,
+      type: template.type,
       category: template.category,
       thc_percentage: template.thc_percentage,
       cbd_percentage: template.cbd_percentage,
@@ -182,7 +245,8 @@ export default function AdminTemplatesPage() {
   const resetTemplateForm = () => {
     setTemplateForm({
       name: "",
-      category: "",
+      type: "indica",
+      category: "premium",
       thc_percentage: 0,
       cbd_percentage: 0,
       effects: [],
@@ -190,59 +254,77 @@ export default function AdminTemplatesPage() {
       medical_uses: [],
       description: "",
     })
-    setEditingTemplate(null)
   }
 
   const resetProductForm = () => {
     setProductForm({
       template_id: "",
       name: "",
-      extraction_type: "",
+      extraction_type: "dry",
       price: 0,
       stock_grams: 0,
       description: "",
     })
   }
 
-  const toggleArrayItem = (array: string[], item: string, setter: (arr: string[]) => void) => {
-    if (array.includes(item)) {
-      setter(array.filter((i) => i !== item))
-    } else {
-      setter([...array, item])
+  const addArrayItem = (field: keyof typeof templateForm, value: string) => {
+    if (value && !templateForm[field].includes(value)) {
+      setTemplateForm((prev) => ({
+        ...prev,
+        [field]: [...(prev[field] as string[]), value],
+      }))
     }
+  }
+
+  const removeArrayItem = (field: keyof typeof templateForm, value: string) => {
+    setTemplateForm((prev) => ({
+      ...prev,
+      [field]: (prev[field] as string[]).filter((item) => item !== value),
+    }))
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 flex items-center justify-center">
-        <div className="text-white text-xl">Carregando...</div>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center">Carregando...</div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">🌿 Painel Admin - Cannabis Marketplace</h1>
-          <p className="text-green-200">Gerencie templates de genéticas e produtos</p>
+          <h1 className="text-4xl font-bold text-green-800 mb-2">
+            <Leaf className="inline-block mr-3" />
+            Painel Admin - Estação da Fumaça
+          </h1>
+          <p className="text-green-600">Gerencie templates de genéticas e produtos</p>
         </div>
 
+        {error && (
+          <Alert className="mb-6 border-red-200 bg-red-50">
+            <AlertDescription className="text-red-800">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {success && (
+          <Alert className="mb-6 border-green-200 bg-green-50">
+            <AlertDescription className="text-green-800">{success}</AlertDescription>
+          </Alert>
+        )}
+
         <Tabs defaultValue="templates" className="space-y-6">
-          <TabsList className="bg-green-800/50 border-green-600">
-            <TabsTrigger value="templates" className="data-[state=active]:bg-green-600">
-              <Leaf className="w-4 h-4 mr-2" />
-              Templates de Genéticas
-            </TabsTrigger>
-            <TabsTrigger value="products" className="data-[state=active]:bg-green-600">
-              <Package className="w-4 h-4 mr-2" />
-              Produtos
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="templates">Templates de Genéticas</TabsTrigger>
+            <TabsTrigger value="products">Produtos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="templates" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-white">Templates de Genéticas</h2>
+              <h2 className="text-2xl font-semibold text-green-800">Templates de Genéticas</h2>
               <Button onClick={() => setShowTemplateForm(true)} className="bg-green-600 hover:bg-green-700">
                 <Plus className="w-4 h-4 mr-2" />
                 Novo Template
@@ -250,162 +332,178 @@ export default function AdminTemplatesPage() {
             </div>
 
             {showTemplateForm && (
-              <Card className="bg-green-800/30 border-green-600">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-white">{editingTemplate ? "Editar Template" : "Novo Template"}</CardTitle>
+                  <CardTitle>{editingTemplate ? "Editar Template" : "Novo Template"}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleTemplateSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="name" className="text-green-200">
-                          Nome da Genética
-                        </Label>
+                        <Label htmlFor="name">Nome da Genética</Label>
                         <Input
                           id="name"
                           value={templateForm.name}
-                          onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
-                          className="bg-green-900/50 border-green-600 text-white"
+                          onChange={(e) => setTemplateForm((prev) => ({ ...prev, name: e.target.value }))}
                           required
                         />
                       </div>
                       <div>
-                        <Label htmlFor="category" className="text-green-200">
-                          Categoria
-                        </Label>
+                        <Label htmlFor="type">Tipo</Label>
                         <Select
-                          value={templateForm.category}
-                          onValueChange={(value) => setTemplateForm({ ...templateForm, category: value })}
+                          value={templateForm.type}
+                          onValueChange={(value) => setTemplateForm((prev) => ({ ...prev, type: value }))}
                         >
-                          <SelectTrigger className="bg-green-900/50 border-green-600 text-white">
-                            <SelectValue placeholder="Selecione a categoria" />
+                          <SelectTrigger>
+                            <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {CATEGORIES.map((cat) => (
-                              <SelectItem key={cat} value={cat}>
-                                {cat}
-                              </SelectItem>
-                            ))}
+                            <SelectItem value="indica">Indica</SelectItem>
+                            <SelectItem value="sativa">Sativa</SelectItem>
+                            <SelectItem value="hybrid">Híbrida</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="thc" className="text-green-200">
-                          THC %
-                        </Label>
+                        <Label htmlFor="category">Categoria</Label>
+                        <Select
+                          value={templateForm.category}
+                          onValueChange={(value) => setTemplateForm((prev) => ({ ...prev, category: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="premium">Premium</SelectItem>
+                            <SelectItem value="standard">Standard</SelectItem>
+                            <SelectItem value="exotic">Exotic</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="thc">THC %</Label>
                         <Input
                           id="thc"
                           type="number"
                           step="0.1"
                           value={templateForm.thc_percentage}
                           onChange={(e) =>
-                            setTemplateForm({ ...templateForm, thc_percentage: Number.parseFloat(e.target.value) || 0 })
+                            setTemplateForm((prev) => ({
+                              ...prev,
+                              thc_percentage: Number.parseFloat(e.target.value) || 0,
+                            }))
                           }
-                          className="bg-green-900/50 border-green-600 text-white"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="cbd" className="text-green-200">
-                          CBD %
-                        </Label>
+                        <Label htmlFor="cbd">CBD %</Label>
                         <Input
                           id="cbd"
                           type="number"
                           step="0.1"
                           value={templateForm.cbd_percentage}
                           onChange={(e) =>
-                            setTemplateForm({ ...templateForm, cbd_percentage: Number.parseFloat(e.target.value) || 0 })
+                            setTemplateForm((prev) => ({
+                              ...prev,
+                              cbd_percentage: Number.parseFloat(e.target.value) || 0,
+                            }))
                           }
-                          className="bg-green-900/50 border-green-600 text-white"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <Label className="text-green-200">Efeitos</Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {EFFECTS.map((effect) => (
+                      <Label>Efeitos</Label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {templateForm.effects.map((effect) => (
                           <Badge
                             key={effect}
-                            variant={templateForm.effects.includes(effect) ? "default" : "outline"}
-                            className={`cursor-pointer ${
-                              templateForm.effects.includes(effect)
-                                ? "bg-green-600 text-white"
-                                : "border-green-600 text-green-200 hover:bg-green-600 hover:text-white"
-                            }`}
-                            onClick={() =>
-                              toggleArrayItem(templateForm.effects, effect, (effects) =>
-                                setTemplateForm({ ...templateForm, effects }),
-                              )
-                            }
+                            variant="secondary"
+                            className="cursor-pointer"
+                            onClick={() => removeArrayItem("effects", effect)}
                           >
-                            {effect}
+                            {effect} ×
                           </Badge>
                         ))}
                       </div>
+                      <Select onValueChange={(value) => addArrayItem("effects", value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Adicionar efeito" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {effectOptions.map((effect) => (
+                            <SelectItem key={effect} value={effect}>
+                              {effect}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
-                      <Label className="text-green-200">Sabores</Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {FLAVORS.map((flavor) => (
+                      <Label>Sabores</Label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {templateForm.flavors.map((flavor) => (
                           <Badge
                             key={flavor}
-                            variant={templateForm.flavors.includes(flavor) ? "default" : "outline"}
-                            className={`cursor-pointer ${
-                              templateForm.flavors.includes(flavor)
-                                ? "bg-green-600 text-white"
-                                : "border-green-600 text-green-200 hover:bg-green-600 hover:text-white"
-                            }`}
-                            onClick={() =>
-                              toggleArrayItem(templateForm.flavors, flavor, (flavors) =>
-                                setTemplateForm({ ...templateForm, flavors }),
-                              )
-                            }
+                            variant="secondary"
+                            className="cursor-pointer"
+                            onClick={() => removeArrayItem("flavors", flavor)}
                           >
-                            {flavor}
+                            {flavor} ×
                           </Badge>
                         ))}
                       </div>
+                      <Select onValueChange={(value) => addArrayItem("flavors", value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Adicionar sabor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {flavorOptions.map((flavor) => (
+                            <SelectItem key={flavor} value={flavor}>
+                              {flavor}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
-                      <Label className="text-green-200">Usos Medicinais</Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {MEDICAL_USES.map((use) => (
+                      <Label>Usos Medicinais</Label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {templateForm.medical_uses.map((use) => (
                           <Badge
                             key={use}
-                            variant={templateForm.medical_uses.includes(use) ? "default" : "outline"}
-                            className={`cursor-pointer ${
-                              templateForm.medical_uses.includes(use)
-                                ? "bg-green-600 text-white"
-                                : "border-green-600 text-green-200 hover:bg-green-600 hover:text-white"
-                            }`}
-                            onClick={() =>
-                              toggleArrayItem(templateForm.medical_uses, use, (medical_uses) =>
-                                setTemplateForm({ ...templateForm, medical_uses }),
-                              )
-                            }
+                            variant="secondary"
+                            className="cursor-pointer"
+                            onClick={() => removeArrayItem("medical_uses", use)}
                           >
-                            {use}
+                            {use} ×
                           </Badge>
                         ))}
                       </div>
+                      <Select onValueChange={(value) => addArrayItem("medical_uses", value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Adicionar uso medicinal" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {medicalOptions.map((use) => (
+                            <SelectItem key={use} value={use}>
+                              {use}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
-                      <Label htmlFor="description" className="text-green-200">
-                        Descrição
-                      </Label>
+                      <Label htmlFor="description">Descrição</Label>
                       <textarea
                         id="description"
-                        value={templateForm.description}
-                        onChange={(e) => setTemplateForm({ ...templateForm, description: e.target.value })}
-                        className="w-full p-3 bg-green-900/50 border border-green-600 rounded-md text-white resize-none"
+                        className="w-full p-2 border rounded-md"
                         rows={3}
+                        value={templateForm.description}
+                        onChange={(e) => setTemplateForm((prev) => ({ ...prev, description: e.target.value }))}
                       />
                     </div>
 
@@ -418,9 +516,9 @@ export default function AdminTemplatesPage() {
                         variant="outline"
                         onClick={() => {
                           setShowTemplateForm(false)
+                          setEditingTemplate(null)
                           resetTemplateForm()
                         }}
-                        className="border-green-600 text-green-200 hover:bg-green-600 hover:text-white"
                       >
                         Cancelar
                       </Button>
@@ -432,43 +530,35 @@ export default function AdminTemplatesPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {templates.map((template) => (
-                <Card key={template.id} className="bg-green-800/30 border-green-600">
+                <Card key={template.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-white">{template.name}</CardTitle>
-                        <CardDescription className="text-green-200">{template.category}</CardDescription>
+                        <CardTitle className="text-green-800">{template.name}</CardTitle>
+                        <CardDescription>
+                          {template.type} • {template.category}
+                        </CardDescription>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditTemplate(template)}
-                          className="border-green-600 text-green-200 hover:bg-green-600 hover:text-white"
-                        >
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDeleteTemplate(template.id)}
-                          className="border-red-600 text-red-200 hover:bg-red-600 hover:text-white"
-                        >
+                        <Button size="sm" variant="outline" onClick={() => handleDeleteTemplate(template.id)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-green-200">THC: {template.thc_percentage}%</span>
-                        <span className="text-green-200">CBD: {template.cbd_percentage}%</span>
+                        <span>THC: {template.thc_percentage}%</span>
+                        <span>CBD: {template.cbd_percentage}%</span>
                       </div>
 
                       {template.effects && template.effects.length > 0 && (
                         <div>
-                          <p className="text-green-200 text-sm mb-1">Efeitos:</p>
+                          <p className="text-sm font-medium mb-1">Efeitos:</p>
                           <div className="flex flex-wrap gap-1">
                             {template.effects.slice(0, 3).map((effect) => (
                               <Badge key={effect} variant="secondary" className="text-xs">
@@ -485,14 +575,14 @@ export default function AdminTemplatesPage() {
                       )}
 
                       {template.description && (
-                        <p className="text-green-200 text-sm line-clamp-2">{template.description}</p>
+                        <p className="text-sm text-gray-600 line-clamp-2">{template.description}</p>
                       )}
 
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center pt-2">
                         <Badge variant={template.is_active ? "default" : "secondary"}>
                           {template.is_active ? "Ativo" : "Inativo"}
                         </Badge>
-                        <span className="text-xs text-green-300">
+                        <span className="text-xs text-gray-500">
                           {new Date(template.created_at).toLocaleDateString()}
                         </span>
                       </div>
@@ -505,122 +595,101 @@ export default function AdminTemplatesPage() {
 
           <TabsContent value="products" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-white">Produtos</h2>
+              <h2 className="text-2xl font-semibold text-green-800">Produtos</h2>
               <Button onClick={() => setShowProductForm(true)} className="bg-green-600 hover:bg-green-700">
-                <Plus className="w-4 h-4 mr-2" />
+                <Package className="w-4 h-4 mr-2" />
                 Novo Produto
               </Button>
             </div>
 
             {showProductForm && (
-              <Card className="bg-green-800/30 border-green-600">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-white">Novo Produto</CardTitle>
+                  <CardTitle>Novo Produto</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleProductSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="template_id" className="text-green-200">
-                          Template Base
-                        </Label>
+                        <Label htmlFor="template_id">Template Base</Label>
                         <Select
                           value={productForm.template_id}
-                          onValueChange={(value) => setProductForm({ ...productForm, template_id: value })}
+                          onValueChange={(value) => setProductForm((prev) => ({ ...prev, template_id: value }))}
                         >
-                          <SelectTrigger className="bg-green-900/50 border-green-600 text-white">
-                            <SelectValue placeholder="Selecione o template" />
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um template" />
                           </SelectTrigger>
                           <SelectContent>
-                            {templates
-                              .filter((t) => t.is_active)
-                              .map((template) => (
-                                <SelectItem key={template.id} value={template.id.toString()}>
-                                  {template.name} ({template.category})
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="product_name" className="text-green-200">
-                          Nome do Produto
-                        </Label>
-                        <Input
-                          id="product_name"
-                          value={productForm.name}
-                          onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                          className="bg-green-900/50 border-green-600 text-white"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <Label htmlFor="extraction_type" className="text-green-200">
-                          Tipo de Extração
-                        </Label>
-                        <Select
-                          value={productForm.extraction_type}
-                          onValueChange={(value) => setProductForm({ ...productForm, extraction_type: value })}
-                        >
-                          <SelectTrigger className="bg-green-900/50 border-green-600 text-white">
-                            <SelectValue placeholder="Tipo de extração" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {EXTRACTION_TYPES.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
+                            {templates.map((template) => (
+                              <SelectItem key={template.id} value={template.id.toString()}>
+                                {template.name} ({template.type})
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label htmlFor="price" className="text-green-200">
-                          Preço (R$/g)
-                        </Label>
+                        <Label htmlFor="product_name">Nome do Produto</Label>
+                        <Input
+                          id="product_name"
+                          value={productForm.name}
+                          onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="extraction_type">Tipo de Extração</Label>
+                        <Select
+                          value={productForm.extraction_type}
+                          onValueChange={(value) => setProductForm((prev) => ({ ...prev, extraction_type: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {extractionTypes.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="price">Preço (R$/g)</Label>
                         <Input
                           id="price"
                           type="number"
                           step="0.01"
                           value={productForm.price}
                           onChange={(e) =>
-                            setProductForm({ ...productForm, price: Number.parseFloat(e.target.value) || 0 })
+                            setProductForm((prev) => ({ ...prev, price: Number.parseFloat(e.target.value) || 0 }))
                           }
-                          className="bg-green-900/50 border-green-600 text-white"
                           required
                         />
                       </div>
                       <div>
-                        <Label htmlFor="stock_grams" className="text-green-200">
-                          Estoque (gramas)
-                        </Label>
+                        <Label htmlFor="stock">Estoque (gramas)</Label>
                         <Input
-                          id="stock_grams"
+                          id="stock"
                           type="number"
                           step="0.1"
                           value={productForm.stock_grams}
                           onChange={(e) =>
-                            setProductForm({ ...productForm, stock_grams: Number.parseFloat(e.target.value) || 0 })
+                            setProductForm((prev) => ({ ...prev, stock_grams: Number.parseFloat(e.target.value) || 0 }))
                           }
-                          className="bg-green-900/50 border-green-600 text-white"
-                          required
                         />
                       </div>
                     </div>
 
                     <div>
-                      <Label htmlFor="product_description" className="text-green-200">
-                        Descrição
-                      </Label>
+                      <Label htmlFor="product_description">Descrição</Label>
                       <textarea
                         id="product_description"
-                        value={productForm.description}
-                        onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
-                        className="w-full p-3 bg-green-900/50 border border-green-600 rounded-md text-white resize-none"
+                        className="w-full p-2 border rounded-md"
                         rows={3}
+                        value={productForm.description}
+                        onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))}
                       />
                     </div>
 
@@ -635,7 +704,6 @@ export default function AdminTemplatesPage() {
                           setShowProductForm(false)
                           resetProductForm()
                         }}
-                        className="border-green-600 text-green-200 hover:bg-green-600 hover:text-white"
                       >
                         Cancelar
                       </Button>
@@ -647,12 +715,12 @@ export default function AdminTemplatesPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {products.map((product) => (
-                <Card key={product.id} className="bg-green-800/30 border-green-600">
+                <Card key={product.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-white">{product.name}</CardTitle>
-                        <CardDescription className="text-green-200">
+                        <CardTitle className="text-green-800">{product.name}</CardTitle>
+                        <CardDescription>
                           {product.template_name} • {product.extraction_type}
                         </CardDescription>
                       </div>
@@ -662,25 +730,27 @@ export default function AdminTemplatesPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-green-200">Preço:</span>
-                        <span className="text-white font-bold">R$ {product.price.toFixed(2)}/g</span>
+                        <span className="text-lg font-bold text-green-600">R$ {product.price.toFixed(2)}/g</span>
+                        <span className="text-sm text-gray-600">{product.stock_grams}g em estoque</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-green-200">Estoque:</span>
-                        <span className={`font-bold ${product.stock_grams > 0 ? "text-green-400" : "text-red-400"}`}>
-                          {product.stock_grams}g
+
+                      <div className="flex items-center gap-2">
+                        <Beaker className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm capitalize">
+                          {extractionTypes.find((t) => t.value === product.extraction_type)?.label}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-green-200">Categoria:</span>
-                        <Badge variant="outline" className="border-green-600 text-green-200">
-                          {product.template_category}
-                        </Badge>
-                      </div>
-                      <div className="text-xs text-green-300">
-                        Criado em: {new Date(product.created_at).toLocaleDateString()}
+
+                      {product.description && (
+                        <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
+                      )}
+
+                      <div className="pt-2 border-t">
+                        <span className="text-xs text-gray-500">
+                          Criado em {new Date(product.created_at).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
                   </CardContent>
