@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&family=Butcherman&family=Griffy:wght@400&display=swap");
-
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -18,47 +16,67 @@
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-    --primary: 142 76% 36%;
+    --primary: 0 0% 9%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 142 30% 15%;
-    --secondary-foreground: 142 76% 80%;
-    --muted: 142 30% 96%;
-    --muted-foreground: 142 30% 45%;
-    --accent: 25 95% 53%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
     --accent-foreground: 0 0% 9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 142 30% 89%;
-    --input: 142 30% 89%;
-    --ring: 142 76% 36%;
-    --chart-1: 142 76% 36%;
-    --chart-2: 25 95% 53%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
-
   .dark {
-    --background: 142 30% 8%;
-    --foreground: 142 30% 98%;
-    --card: 142 30% 10%;
-    --card-foreground: 142 30% 98%;
-    --popover: 142 30% 8%;
-    --popover-foreground: 142 30% 98%;
-    --primary: 142 76% 45%;
-    --primary-foreground: 142 30% 8%;
-    --secondary: 142 30% 15%;
-    --secondary-foreground: 142 76% 80%;
-    --muted: 142 30% 15%;
-    --muted-foreground: 142 30% 63%;
-    --accent: 25 95% 53%;
-    --accent-foreground: 142 30% 8%;
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 142 30% 20%;
-    --input: 142 30% 20%;
-    --ring: 142 76% 45%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -68,214 +86,167 @@
   }
   body {
     @apply bg-background text-foreground;
-    background: linear-gradient(135deg, #0f1419 0%, #1a2332 25%, #0d1b2a 50%, #1a2332 75%, #0f1419 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
     min-height: 100vh;
+    color: #e2e8f0;
   }
 }
 
-/* Smoke Animation */
-@keyframes smoke {
-  0% {
-    opacity: 0;
-    transform: translateY(0) scale(0.5) rotate(0deg);
+/* Cannabis-themed custom styles */
+@layer components {
+  .brand-font {
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
   }
-  50% {
-    opacity: 0.8;
-    transform: translateY(-20px) scale(1) rotate(180deg);
+
+  .street-font {
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-weight: 500;
+    font-style: italic;
   }
-  100% {
-    opacity: 0;
-    transform: translateY(-40px) scale(1.5) rotate(360deg);
+
+  .bud-card {
+    @apply bg-gradient-to-br from-green-900/40 via-green-800/30 to-black/60;
+    @apply backdrop-blur-sm border border-green-500/20;
+    @apply shadow-2xl shadow-green-900/20;
+    transition: all 0.3s ease;
+  }
+
+  .bud-card:hover {
+    @apply border-green-400/40 shadow-green-400/20;
+    transform: translateY(-2px);
+  }
+
+  .cannabis-button {
+    @apply bg-gradient-to-r from-green-600 via-green-500 to-green-600;
+    @apply hover:from-green-500 hover:via-green-400 hover:to-green-500;
+    @apply text-white font-bold shadow-lg shadow-green-900/50;
+    @apply border-0 transition-all duration-300;
+  }
+
+  .cannabis-button:hover {
+    @apply shadow-xl shadow-green-400/30;
+    transform: translateY(-1px);
+  }
+
+  .strain-badge {
+    @apply bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold;
+  }
+
+  .thc-indicator {
+    @apply h-2 bg-green-900 rounded-full overflow-hidden;
+  }
+
+  .thc-indicator::after {
+    content: "";
+    @apply block h-full bg-gradient-to-r from-green-400 to-red-500 rounded-full;
+    width: 80%;
+    animation: thc-pulse 2s ease-in-out infinite alternate;
+  }
+
+  .floating-bud {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .trichome-sparkle {
+    animation: sparkle 2s ease-in-out infinite;
+  }
+
+  .smoke-effect {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .smoke-effect::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(34, 197, 94, 0.1) 0%, transparent 70%);
+    animation: smoke 4s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .joint-divider {
+    @apply h-1 bg-gradient-to-r from-transparent via-orange-500 to-transparent;
+    @apply mx-auto max-w-xs rounded-full;
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.5);
+  }
+
+  .loading-bud {
+    @apply w-12 h-12 border-4 border-green-500 border-t-orange-500 rounded-full;
+    animation: spin 1s linear infinite;
+  }
+
+  .particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: radial-gradient(circle, #22c55e, transparent);
+    border-radius: 50%;
+    animation: float-particle 15s linear infinite;
   }
 }
 
 @keyframes float {
   0%,
   100% {
-    transform: translateY(0px);
+    transform: translateY(0px) rotate(0deg);
   }
   50% {
-    transform: translateY(-10px);
+    transform: translateY(-10px) rotate(5deg);
   }
 }
 
-@keyframes glow {
+@keyframes sparkle {
   0%,
   100% {
-    box-shadow: 0 0 5px #22c55e, 0 0 10px #22c55e, 0 0 15px #22c55e;
-  }
-  50% {
-    box-shadow: 0 0 10px #16a34a, 0 0 20px #16a34a, 0 0 30px #16a34a;
-  }
-}
-
-@keyframes trichome-sparkle {
-  0%,
-  100% {
-    opacity: 0.6;
+    opacity: 1;
     transform: scale(1);
   }
   50% {
-    opacity: 1;
-    transform: scale(1.2);
+    opacity: 0.7;
+    transform: scale(1.05);
   }
 }
 
-/* Cannabis-themed components */
-.smoke-effect {
-  position: relative;
-  overflow: hidden;
+@keyframes smoke {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.2);
+    opacity: 0.3;
+  }
 }
 
-.smoke-effect::before {
-  content: "";
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  width: 4px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 50%;
-  animation: smoke 3s infinite;
-  transform: translateX(-50%);
-}
-
-.smoke-effect::after {
-  content: "";
-  position: absolute;
-  top: -10px;
-  left: 60%;
-  width: 3px;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.4);
-  border-radius: 50%;
-  animation: smoke 3s infinite 1s;
-  transform: translateX(-50%);
-}
-
-.cannabis-button {
-  position: relative;
-  background: linear-gradient(135deg, #16a34a, #22c55e);
-  border: 2px solid #f59e0b;
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
-.cannabis-button:hover {
-  background: linear-gradient(135deg, #22c55e, #4ade80);
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
-  transform: translateY(-2px);
-}
-
-.cannabis-button:active {
-  transform: translateY(0);
-}
-
-.cannabis-button::before {
-  content: "🌿";
-  position: absolute;
-  top: 50%;
-  left: -30px;
-  transform: translateY(-50%);
-  font-size: 20px;
-  opacity: 0;
-  transition: all 0.3s ease;
-}
-
-.cannabis-button:hover::before {
-  left: 10px;
-  opacity: 1;
-}
-
-.bud-card {
-  background: linear-gradient(135deg, rgba(22, 163, 74, 0.1), rgba(34, 197, 94, 0.05));
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
-}
-
-.bud-card:hover {
-  background: linear-gradient(135deg, rgba(22, 163, 74, 0.2), rgba(34, 197, 94, 0.1));
-  border-color: rgba(245, 158, 11, 0.5);
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(34, 197, 94, 0.2);
-}
-
-.strain-badge {
-  background: linear-gradient(45deg, #f59e0b, #fbbf24);
-  color: #1a2e05;
-  font-weight: bold;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.thc-indicator {
-  background: linear-gradient(90deg, #dc2626, #f59e0b, #22c55e);
-  height: 8px;
-  border-radius: 4px;
-  position: relative;
-  overflow: hidden;
-}
-
-.thc-indicator::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
+@keyframes thc-pulse {
   0% {
-    transform: translateX(-100%);
+    width: 70%;
   }
   100% {
-    transform: translateX(100%);
+    width: 90%;
   }
 }
 
-.floating-bud {
-  animation: float 6s ease-in-out infinite;
-}
-
-.trichome-sparkle {
-  animation: trichome-sparkle 2s ease-in-out infinite;
-}
-
-/* Typography */
-.brand-font {
-  font-family: "Griffy", cursive;
-}
-
-.street-font {
-  font-family: "Butcherman", cursive;
-}
-
-/* Particle effects */
-.particles {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.particle {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background: rgba(34, 197, 94, 0.6);
-  border-radius: 50%;
-  animation: particle-float 10s infinite linear;
-}
-
-@keyframes particle-float {
+@keyframes float-particle {
   0% {
-    transform: translateY(100vh) rotate(0deg);
+    transform: translateY(100vh) translateX(0px) rotate(0deg);
     opacity: 0;
   }
   10% {
@@ -285,29 +256,29 @@
     opacity: 1;
   }
   100% {
-    transform: translateY(-10vh) rotate(360deg);
+    transform: translateY(-10vh) translateX(100px) rotate(360deg);
     opacity: 0;
   }
 }
 
-/* Joint/Blunt styling */
-.joint-divider {
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #8b5a2b, #d2b48c, #8b5a2b, transparent);
-  position: relative;
-  margin: 2rem 0;
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
-.joint-divider::before {
-  content: "🚬";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  background: #1a2e05;
-  padding: 0.5rem;
-  border-radius: 50%;
-  font-size: 1.2rem;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .brand-font {
+    font-size: 1.5rem;
+  }
+
+  .bud-card {
+    margin: 0.5rem;
+  }
 }
 
 /* Custom scrollbar */
@@ -316,44 +287,28 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(22, 163, 74, 0.1);
+  @apply bg-green-900/20;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #16a34a, #22c55e);
-  border-radius: 4px;
+  @apply bg-green-600 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #22c55e, #4ade80);
+  @apply bg-green-500;
 }
 
-/* Loading animation */
-.loading-bud {
-  width: 40px;
-  height: 40px;
-  background: url("/logo-estacao-fumaça.png") no-repeat center;
-  background-size: contain;
-  animation: spin 2s linear infinite;
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .cannabis-button::before {
-    display: none;
-  }
-
-  .smoke-effect::before,
-  .smoke-effect::after {
-    display: none;
-  }
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
