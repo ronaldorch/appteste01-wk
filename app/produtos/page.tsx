@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ShoppingCart, Search, Filter, Leaf, Eye, Zap, Brain, Heart, Sparkles } from "lucide-react"
+import { ShoppingCart, Search, Filter, Leaf, Eye, Zap, Brain, Heart, Sparkles, Beaker } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
 
 interface Product {
   id: number
@@ -26,6 +25,17 @@ interface Product {
   flowering_time?: string
   difficulty?: string
 }
+
+// Componente SVG inline para cannabis
+const CannabisIcon = ({ className = "w-6 h-6", color = "currentColor" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2C12 2 8 6 8 10C8 12 10 14 12 14C14 14 16 12 16 10C16 6 12 2 12 2Z" fill={color} fillOpacity="0.8" />
+    <path d="M12 14C12 14 6 12 4 16C3 18 5 20 7 19C9 18 12 14 12 14Z" fill={color} fillOpacity="0.6" />
+    <path d="M12 14C12 14 18 12 20 16C21 18 19 20 17 19C15 18 12 14 12 14Z" fill={color} fillOpacity="0.6" />
+    <path d="M12 14C12 14 10 18 6 20C4 21 2 19 3 17C4 15 12 14 12 14Z" fill={color} fillOpacity="0.4" />
+    <path d="M12 14C12 14 14 18 18 20C20 21 22 19 21 17C20 15 12 14 12 14Z" fill={color} fillOpacity="0.4" />
+  </svg>
+)
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -138,13 +148,7 @@ export default function ProductsPage() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-4">
               <div className="floating-bud">
-                <Image
-                  src="/icons/cannabis-bud.png"
-                  alt="Estação da Fumaça"
-                  width={60}
-                  height={60}
-                  className="trichome-sparkle"
-                />
+                <CannabisIcon className="w-15 h-15 text-green-400 trichome-sparkle" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold brand-font text-transparent bg-clip-text bg-gradient-to-r from-green-300 to-orange-400">
@@ -198,13 +202,13 @@ export default function ProductsPage() {
                 <SelectItem value="all">Todas as Categorias</SelectItem>
                 <SelectItem value="flores">
                   <div className="flex items-center gap-2">
-                    <Image src="/icons/cannabis-bud.png" alt="" width={16} height={16} />
+                    <CannabisIcon className="w-4 h-4 text-green-400" />
                     Flores
                   </div>
                 </SelectItem>
                 <SelectItem value="extracoes">
                   <div className="flex items-center gap-2">
-                    <Image src="/icons/hash-extraction.png" alt="" width={16} height={16} />
+                    <Beaker className="w-4 h-4 text-orange-400" />
                     Extrações
                   </div>
                 </SelectItem>
