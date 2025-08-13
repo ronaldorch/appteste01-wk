@@ -1,54 +1,40 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { GeistSans } from "geist/font/sans"
+import { GeistMono } from "geist/font/mono"
 import "./globals.css"
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-})
+import { CartProvider } from "@/contexts/cart-context"
+import { ThemeProvider } from "next-themes"
+import { Inter as inter } from "next/font/google"
 
 export const metadata: Metadata = {
-  title: "Estação da Fumaça - Premium Cannabis Delivery",
-  description:
-    "As melhores genéticas de cannabis premium. Da boca pra sua porta, sem vacilo. Qualidade garantida, entrega discreta.",
-  keywords: "cannabis, marijuana, delivery, premium, genéticas, flores, extrações",
-  authors: [{ name: "Estação da Fumaça" }],
-  creator: "Estação da Fumaça",
-  publisher: "Estação da Fumaça",
-  robots: "index, follow",
-  openGraph: {
-    type: "website",
-    locale: "pt_BR",
-    url: "https://estacaodafumaca.com",
-    title: "Estação da Fumaça - Premium Cannabis Delivery",
-    description: "As melhores genéticas de cannabis premium. Da boca pra sua porta, sem vacilo.",
-    siteName: "Estação da Fumaça",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Estação da Fumaça - Premium Cannabis Delivery",
-    description: "As melhores genéticas de cannabis premium. Da boca pra sua porta, sem vacilo.",
-  },
-  viewport: "width=device-width, initial-scale=1",
-  themeColor: "#22c55e",
-    generator: 'v0.app'
+  title: "v0 App",
+  description: "Created with v0",
+  generator: "v0.app",
 }
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <style>{`
+html {
+  font-family: ${GeistSans.style.fontFamily};
+  --font-sans: ${GeistSans.variable};
+  --font-mono: ${GeistMono.variable};
+}
+        `}</style>
       </head>
-      <body className={`${inter.className} antialiased`}>
-        <div className="min-h-screen bg-cannabis-gradient">{children}</div>
+      <body className={inter.className}>
+        <CartProvider>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+            {children}
+          </ThemeProvider>
+        </CartProvider>
       </body>
     </html>
   )

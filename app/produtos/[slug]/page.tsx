@@ -10,6 +10,7 @@ import { ShoppingCart, ArrowLeft, Eye, Zap, Brain, Heart, Sparkles, Leaf, BarCha
 import Link from "next/link"
 import Image from "next/image"
 import { useParams } from "next/navigation"
+import { useCart } from "@/contexts/cart-context"
 
 interface ProductDetail {
   id: number
@@ -61,25 +62,31 @@ export default function ProductDetailPage() {
     }
   }
 
+  const { addItem } = useCart()
+
   const addToCart = async () => {
     if (!product) return
 
     try {
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: product.id, quantity }),
-      })
+      await addItem(
+        {
+          product_id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image_url || "/placeholder.svg?height=100&width=100&text=🌿",
+          slug: params.slug as string,
+          stock_quantity: product.stock_quantity,
+        },
+        quantity,
+      )
 
-      if (response.ok) {
-        // Efeito visual de sucesso
-        const notification = document.createElement("div")
-        notification.innerHTML = `🌿 ${quantity}x ${product.name} adicionado ao carrinho!`
-        notification.className =
-          "fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg z-50 animate-bounce shadow-2xl"
-        document.body.appendChild(notification)
-        setTimeout(() => notification.remove(), 4000)
-      }
+      // Efeito visual de sucesso
+      const notification = document.createElement("div")
+      notification.innerHTML = `🌿 ${quantity}x ${product.name} adicionado ao carrinho!`
+      notification.className =
+        "fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg z-50 animate-bounce shadow-2xl"
+      document.body.appendChild(notification)
+      setTimeout(() => notification.remove(), 4000)
     } catch (error) {
       console.error("Erro ao adicionar ao carrinho:", error)
     }
